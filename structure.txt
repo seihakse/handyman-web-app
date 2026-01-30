@@ -1,0 +1,203 @@
+src/
+├─ app/
+│  ├─ (auth)/
+│  ├─ api/
+│  │  ├─ auth/
+│  │  │  ├─ signin/
+│  │  │  │  └─ route.ts
+│  │  │  └─ signup/
+│  │  │     └─ route.ts
+│  │  └─ handyman/
+│  │     └─ profile/
+│  │        └─ route.ts
+│  ├─ dashboard/
+│  ├─ signin/
+│  │  └─ page.tsx
+│  ├─ signup/
+│  │  └─ page.tsx
+│  ├─ user-type/
+│  │  └─ page.tsx
+│  ├─ favicon.ico
+│  ├─ globals.css
+│  ├─ layout.tsx
+│  └─ page.tsx
+├─ components/
+│  ├─ feature/
+│  │  ├─ Footer.tsx
+│  │  └─ Header.tsx
+│  ├─ forms/
+│  ├─ Hero/
+│  │  └─ page.tsx
+│  ├─ layout/
+│  ├─ Navbar/
+│  │  └─ page.tsx
+│  ├─ pages/
+│  │  ├─ Contact/
+│  │  │  └─ page.tsx
+│  │  ├─ Handyman/
+│  │  │  └─ page.tsx
+│  │  ├─ HomeContent/
+│  │  │  └─ page.tsx
+│  │  ├─ Process/
+│  │  │  └─ page.tsx
+│  │  └─ services/
+│  │     └─ page.tsx
+│  ├─ PopularServices/
+│  │  └─ page.tsx
+│  └─ ui/
+│     ├─ Button.tsx
+│     ├─ Card.tsx
+│     ├─ Form.tsx
+│     ├─ Input.tsx
+│     ├─ Label.tsx
+│     └─ Textarea.tsx
+├─ lib/
+│  ├─ auth.ts
+│  ├─ db.ts
+│  └─ utils.ts
+└─ mocks/
+   ├─ handymen.tsx
+   ├─ sample_page.html
+   └─ services.ts
+
+
+//second 
+src/
+├─ app/
+│  ├─ (auth)/
+│  ├─ api/
+│  │  ├─ auth/
+│  │  │  ├─ signin/
+│  │  │  │  └─ route.ts
+│  │  │  └─ signup/
+│  │  │     └─ route.ts
+│  │  └─ handyman/
+│  │     └─ profile/
+│  │        └─ route.ts
+│  ├─ dashboard/
+│  │  ├─ analytics/
+│  │  │  └─ page.tsx
+│  │  ├─ handymen/
+│  │  │  └─ page.tsx
+│  │  ├─ settings/
+│  │  │  └─ page.tsx
+│  │  ├─ layout.tsx
+│  │  └─ page.tsx
+│  ├─ pages/
+│  │  ├─ Contact/
+│  │  │  └─ page.tsx
+│  │  ├─ Handyman/
+│  │  │  └─ page.tsx
+│  │  ├─ HomeContent/
+│  │  │  └─ page.tsx
+│  │  ├─ Process/
+│  │  │  └─ page.tsx
+│  │  └─ Services/
+│  │     └─ page.tsx
+│  ├─ signin/
+│  │  └─ page.tsx
+│  ├─ signup/
+│  │  └─ page.tsx
+│  ├─ user-type/
+│  │  └─ page.tsx
+│  ├─ favicon.ico
+│  ├─ globals.css
+│  ├─ layout.tsx
+│  └─ page.tsx
+├─ components/
+│  ├─ feature/
+│  │  ├─ Footer.tsx
+│  │  └─ Header.tsx
+│  ├─ forms/
+│  │  ├─ Form.tsx
+│  │  ├─ Input.tsx
+│  │  ├─ Label.tsx
+│  │  └─ Textarea.tsx
+│  ├─ Hero/
+│  │  └─ Hero.tsx
+│  ├─ layout/
+│  ├─ Navbar/
+│  │  └─ Navbar.tsx
+│  ├─ PopularServices/
+│  │  └─ page.tsx
+│  └─ ui/
+│     ├─ Button.tsx
+│     └─ Card.tsx
+└─ lib/
+   ├─ mocks/
+   │  ├─ handymen.tsx
+   │  ├─ sample_page.html
+   │  └─ services.ts
+   ├─ auth.ts
+   ├─ db.ts
+   └─ utils.ts
+
+//29/Jan/2026
+src/
+├─ app/
+│  ├─ (auth)/
+│  ├─ api/
+│  │  ├─ auth/
+│  │  │  ├─ signin/
+│  │  │  │  └─ route.ts
+│  │  │  └─ signup/
+│  │  │     └─ route.ts
+│  │  └─ handyman/
+│  │     └─ profile/
+│  │        └─ route.ts
+│  ├─ dashboard/
+│  │  ├─ analytics/
+│  │  │  └─ page.tsx
+│  │  ├─ handymen/
+│  │  │  └─ page.tsx
+│  │  ├─ settings/
+│  │  │  └─ page.tsx
+│  │  ├─ layout.tsx
+│  │  └─ page.tsx
+│  ├─ pages/
+│  │  ├─ Contact/
+│  │  │  └─ page.tsx
+│  │  ├─ Handyman/
+│  │  │  └─ page.tsx
+│  │  ├─ Home/
+│  │  │  └─ page.tsx
+│  │  ├─ Process/
+│  │  │  └─ page.tsx
+│  │  └─ Services/
+│  │     └─ page.tsx
+│  ├─ signin/
+│  │  └─ page.tsx
+│  ├─ signup/
+│  │  └─ page.tsx
+│  ├─ user-type/
+│  │  └─ page.tsx
+│  ├─ favicon.ico
+│  ├─ globals.css
+│  ├─ layout.tsx
+│  └─ page.tsx
+├─ components/
+│  ├─ feature/
+│  │  ├─ Footer.tsx
+│  │  └─ Header.tsx
+│  ├─ forms/
+│  │  ├─ Form.tsx
+│  │  ├─ Input.tsx
+│  │  ├─ Label.tsx
+│  │  └─ Textarea.tsx
+│  ├─ Hero/
+│  │  └─ page.tsx
+│  ├─ layout/
+│  │  └─ Navbar.tsx
+│  ├─ PopularServices/
+│  │  └─ page.tsx
+│  └─ ui/
+│     ├─ Button.tsx
+│     └─ Card.tsx
+└─ lib/
+   ├─ mocks/
+   │  ├─ handymen.tsx
+   │  ├─ sample_page.html
+   │  └─ services.ts
+   ├─ auth.ts
+   ├─ db.ts
+   └─ utils.ts

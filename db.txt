@@ -1,0 +1,16 @@
+Now your Handyman app can connect to handyman_db using:
+
+Host: localhost
+Port: 5432
+Database: handyman_db
+Username: handyman_user
+Password: securepassword
+
+# Connect to your database
+psql -U handyman_user -h localhost -d handyman_db
+
+# Backup your database
+pg_dump -U handyman_user -h localhost handyman_db > backup.sql
+
+# Restore from backup
+psql -U handyman_user -h localhost -d handyman_db < backup.sql
