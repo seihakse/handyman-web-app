@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
     console.log('Signin successful for:', user.email)
     
     // Return user data (without password)
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       message: 'Sign in successful',
       user: {
@@ -59,6 +59,24 @@ export async function POST(request: NextRequest) {
         profilePicture: user.profilePicture
       }
     }, { status: 200 })
+
+    // Set user data in cookie for server-side access
+    response.cookies.set({
+      name: 'current-user',
+      value: JSON.stringify({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        profilePicture: user.profilePicture
+      }),
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+      path: '/'
+    })
+
+    return response
 
   } catch (error) {
     console.error('Signin error:', error)

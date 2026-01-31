@@ -52,13 +52,36 @@ export async function POST(request: NextRequest) {
     // Remove password from response
     const { password: _, ...userWithoutPassword } = user
 
-    return NextResponse.json(
+    // Create response with user data
+    const response = NextResponse.json(
       { 
+        success: true, // Added success flag
         message: 'User created successfully', 
         user: userWithoutPassword 
       },
       { status: 201 }
     )
+
+    // Set user data in cookie for immediate authentication
+    response.cookies.set({
+      name: 'current-user',
+      value: JSON.stringify({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        profilePicture: user.profilePicture,
+        phone: user.phone,
+        address: user.address
+      }),
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+      path: '/'
+    })
+
+    return response
+
   } catch (error) {
     console.error('Detailed signup error:', error)
     

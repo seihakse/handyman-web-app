@@ -267,10 +267,10 @@ export default function Home() {
                     </Button>
                   </div>
                   
-                  <div className="flex items-center text-sm text-gray-500">
+                  {/* <div className="flex items-center text-sm text-gray-500">
                     <Clock className="h-4 w-4 mr-2" />
                     {handyman.responseTime}
-                  </div>
+                  </div> */}
                 </CardContent>
               </Card>
             ))}

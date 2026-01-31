@@ -4,6 +4,11 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Menu, X, Bell, User, LogOut, Settings, ChevronDown } from 'lucide-react';
+import { Pacifico } from "next/font/google";
+export const pacifico = Pacifico({
+  weight: "400",
+  subsets: ["latin"],
+});
 
 interface HeaderProps {
   userType?: 'customer' | 'handyman' | 'admin';
