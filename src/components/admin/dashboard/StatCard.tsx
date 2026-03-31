@@ -21,6 +21,7 @@ const colorClasses = {
   green: 'bg-green-50 text-green-600',
   purple: 'bg-purple-50 text-purple-600',
   yellow: 'bg-yellow-50 text-yellow-600',
+  red: 'bg-red-50 text-red-600',
 };
 
 export default function StatCard({ card }: { card: StatCard }) {

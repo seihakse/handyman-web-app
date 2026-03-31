@@ -5,17 +5,17 @@ import Header from '@/components/feature/Header';
 import Footer from '@/components/feature/Footer';
 
 const stepImages = [
-  "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80", // Step 1: Request service
-  "https://images.unsplash.com/photo-1551288049-bebda4e38f71?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80", // Step 2: Get matched with professionals
-  "https://images.unsplash.com/photo-1553877522-43269d4ea984?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80", // Step 3: Compare and choose
-  "https://images.unsplash.com/photo-1611224923853-80b023f02d71?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80", // Step 4: Communicate directly
+  "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80", // Step 1: Find your nearest handyman
+  "https://images.unsplash.com/photo-1551288049-bebda4e38f71?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80", // Step 2: Choose the right handyman
+  "https://images.unsplash.com/photo-1553877522-43269d4ea984?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80", // Step 3: Contact via Telegram
+  "https://images.unsplash.com/photo-1611224923853-80b023f02d71?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80", // Step 4: Get the job done
 
 ];
 
 const steps = [
   {
     number: "1",
-    title: "Find Your Service",
+    title: "Find your nearest handyman",
     description: "Browse our website to find the handyman service you need. View categories, check service descriptions, and understand what we offer.",
     icon: <Search className="w-8 h-8 text-blue-600" />,
     features: [
@@ -108,7 +108,12 @@ export default function ProcessPage() {
       <Header />
       
       {/* Hero Section */}
-      <section className="relative h-96 bg-gradient-to-r from-blue-600 to-blue-800">
+      <section 
+        className="relative bg-cover bg-center py-20 md:py-32"
+        style={{
+          backgroundImage: 'linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url(https://actionhomeservga.com/wp-content/uploads/2024/08/360_F_268881530_cBSYpYQtlhpzMAU5OCXPqSDkXQZz8yHb.jpg)',
+        }}
+      >
         <div className="absolute inset-0 bg-black/40" />
         <div className="relative container mx-auto px-4 h-full flex flex-col items-center justify-center text-center">
           <h1 className="text-5xl font-bold text-white mb-4">How HandyPro Works</h1>

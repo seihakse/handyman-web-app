@@ -26,7 +26,7 @@ export default function Header({ userType }: HeaderProps = {}) {
   { name: 'Services', path: '/pages/Services' },      // Points to app/pages/Services/page.tsx
   { name: 'Process', path: '/pages/Process' },        // Points to app/pages/Process/page.tsx
   { name: 'Handyman', path: '/pages/Handyman' },      // Points to app/pages/Handyman/page.tsx
-  { name: 'Contact', path: '/pages/Contact' },        // Points to app/pages/Contact/page.tsx
+  // { name: 'Contact', path: '/pages/Contact' },        // Points to app/pages/Contact/page.tsx
 ];
 
   const handleSignOut = () => {

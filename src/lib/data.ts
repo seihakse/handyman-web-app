@@ -26,11 +26,11 @@ export const statCards: StatCard[] = [
     color: 'purple'
   },
   {
-    title: 'Total Revenue',
-    value: '$24,580',
-    icon: '💰', // Will map to DollarSign icon
-    trend: '+23.7% from last month',
-    color: 'yellow'
+    title: 'Banned Handymen',
+    value: '0',
+    icon: '👥', // Will map to DollarSign icon
+    trend: 'N/A',
+    color: 'red'
   }
 ];
 

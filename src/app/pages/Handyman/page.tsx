@@ -78,12 +78,17 @@ export default function HandymanPage() {
       <Header />
       
       {/* Hero Section */}
-      <section className="relative h-96 bg-gradient-to-r from-blue-600 to-blue-800">
+      <section 
+        className="relative bg-cover bg-center py-20 md:py-32"
+        style={{
+          backgroundImage: 'linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url(https://t4.ftcdn.net/jpg/01/78/14/57/360_F_178145745_oDRli4ickV2rfj7gJxN1rWd6wfN3OJy2.jpg)',
+        }}
+      >
         <div className="absolute inset-0 bg-black/40" />
         <div className="relative container mx-auto px-4 h-full flex flex-col items-center justify-center text-center">
-          <h1 className="text-5xl font-bold text-white mb-4">How HandyPro Works</h1>
+          <h1 className="text-5xl font-bold text-white mb-4">Our Handyman</h1>
           <p className="text-xl text-gray-200 max-w-3xl">
-            Getting professional home services has never been easier. Follow our simple 6-step process to connect with trusted handymen in your area.
+            Getting professional home services has never been easier. Please find and connect with trusted handymen in your area.
           </p>
         </div>
       </section>
@@ -133,8 +138,13 @@ export default function HandymanPage() {
               <div className="p-6 border-b border-gray-100">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center space-x-4">
-                    <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center border-4 border-white shadow">
-                      <span className="text-2xl font-bold text-blue-600">{handyman.image}</span>
+                    {/* Replace the empty div with this */}
+                    <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-300">
+                      <img 
+                        src={`https://ui-avatars.com/api/?name=${encodeURIComponent(handyman.name)}&background=3B82F6&color=fff&bold=true&size=64`}
+                        alt={handyman.name}
+                        className="w-full h-full object-cover"
+                      />
                     </div>
                     <div>
                       <h3 className="text-xl font-bold text-gray-900">{handyman.name}</h3>

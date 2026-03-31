@@ -21,7 +21,8 @@ import {
   Instagram,
   Mail,
   Phone,
-  MapPin
+  MapPin,
+  User
 } from 'lucide-react'
 import Footer from '@/components/feature/Footer'
 
@@ -115,7 +116,7 @@ export default function Home() {
       <section 
         className="relative bg-cover bg-center py-20 md:py-32"
         style={{
-          backgroundImage: 'linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url(https://images.unsplash.com/photo-1545156521-77bd85671d30?auto=format&fit=crop&w=1920)',
+          backgroundImage: 'linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url(https://t4.ftcdn.net/jpg/03/23/15/19/360_F_323151985_oLkiWe9GF7P9QNvhU9V1DldoZ3OFQrR4.jpg)',
         }}
       >
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -129,7 +130,7 @@ export default function Home() {
             </p>
             
             {/* Search Box */}
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
+            {/* <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
               <div className="flex flex-col md:flex-row gap-4">
                 <div className="flex-1">
                   <div className="relative">
@@ -144,7 +145,7 @@ export default function Home() {
                   Find Handymen
                 </Button>
               </div>
-            </div>
+            </div> */}
           </div>
         </div>
       </section>
@@ -225,7 +226,14 @@ export default function Home() {
               <Card key={index} className="hover:shadow-xl transition-all duration-300">
                 <CardContent className="p-6">
                   <div className="flex items-start space-x-4 mb-4">
-                    <div className="w-16 h-16 bg-gray-300 rounded-full"></div>
+                    {/* Replace the empty div with this */}
+                    <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-300">
+                      <img 
+                        src={`https://ui-avatars.com/api/?name=${encodeURIComponent(handyman.name)}&background=3B82F6&color=fff&bold=true&size=64`}
+                        alt={handyman.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
                     <div className="flex-1">
                       <div className="flex justify-between items-start">
                         <h3 className="font-semibold text-gray-900">{handyman.name}</h3>

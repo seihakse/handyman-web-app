@@ -11,14 +11,14 @@ export default function Topbar() {
         </div>
         
         <div className="flex items-center space-x-6">
-          <div className="relative">
+          {/* <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
             <input
               type="text"
               placeholder="Search..."
               className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 w-64"
             />
-          </div>
+          </div> */}
           
           <button className="relative p-2 text-gray-600 hover:text-gray-900">
             <Bell size={22} />

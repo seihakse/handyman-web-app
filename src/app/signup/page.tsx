@@ -191,7 +191,7 @@ export default function SignUp() {
                   </div>
 
                   {/* Profile Picture */}
-                  <div className="md:col-span-2">
+                  {/* <div className="md:col-span-2">
                     <Label htmlFor="profilePicture">Profile Picture URL</Label>
                     <Input
                       id="profilePicture"
@@ -201,7 +201,7 @@ export default function SignUp() {
                       value={formData.profilePicture}
                       onChange={handleChange}
                     />
-                  </div>
+                  </div> */}
                 </div>
               </div>
 

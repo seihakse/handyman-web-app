@@ -24,7 +24,7 @@ export default function Footer() {
             </div>
           </div>
 
-          <div>
+          {/* <div>
             <h4 className="text-lg font-semibold mb-4">Quick Links</h4>
             <ul className="space-y-2">
               <li><a href="#" className="text-gray-400 hover:text-white cursor-pointer">Find Handymen</a></li>
@@ -33,7 +33,7 @@ export default function Footer() {
               <li><a href="#" className="text-gray-400 hover:text-white cursor-pointer">Safety</a></li>
               <li><a href="https://readdy.ai/?origin=logo" className="text-gray-400 hover:text-white cursor-pointer">Made with Readdy</a></li>
             </ul>
-          </div>
+          </div> */}
 
           <div>
             <h4 className="text-lg font-semibold mb-4">Support</h4>
