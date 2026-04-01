@@ -172,10 +172,10 @@ export default function Services() {
                     </div>
                   </div>
                   
-                  <Button className="w-full bg-blue-600 text-white hover:bg-blue-700 py-3 rounded-lg font-medium transition-colors duration-300 flex items-center justify-center">
+                  {/* <Button className="w-full bg-blue-600 text-white hover:bg-blue-700 py-3 rounded-lg font-medium transition-colors duration-300 flex items-center justify-center">
                     <Users className="w-5 h-5 mr-2" />
                     Go to Handyman
-                  </Button>
+                  </Button> */}
                 </div>
               </Card>
             ))}

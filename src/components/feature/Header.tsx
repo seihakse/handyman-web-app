@@ -1,40 +1,70 @@
+// components/feature/Header.tsx
 'use client';
 
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Menu, X, Bell, User, LogOut, Settings, ChevronDown } from 'lucide-react';
+import { Menu, X, Bell, User, LogOut, Settings, ChevronDown, LayoutDashboard } from 'lucide-react';
 import { Pacifico } from "next/font/google";
+import { useAuth } from '@/app/context/AuthContext';
+
 export const pacifico = Pacifico({
   weight: "400",
   subsets: ["latin"],
 });
 
-interface HeaderProps {
-  userType?: 'customer' | 'handyman' | 'admin';
-}
-
-export default function Header({ userType }: HeaderProps = {}) {
+export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
+  const { user, signOut, isLoading, isAdmin, isHandyman, isCustomer } = useAuth();
 
-  // CORRECT navigation paths based on your app structure
   const navigation = [
-  { name: 'Home', path: '/' },
-  { name: 'Services', path: '/pages/Services' },      // Points to app/pages/Services/page.tsx
-  { name: 'Process', path: '/pages/Process' },        // Points to app/pages/Process/page.tsx
-  { name: 'Handyman', path: '/pages/Handyman' },      // Points to app/pages/Handyman/page.tsx
-  // { name: 'Contact', path: '/pages/Contact' },        // Points to app/pages/Contact/page.tsx
-];
+    { name: 'Home', path: '/' },
+    { name: 'Services', path: '/pages/Services' },
+    { name: 'Process', path: '/pages/Process' },
+    { name: 'Handyman', path: '/pages/Handyman' },
+  ];
 
-  const handleSignOut = () => {
-    // Add your sign out logic here
-    console.log('Signing out...');
-    setIsUserMenuOpen(false);
-    router.push('/');
+  const getDisplayName = () => {
+    if (!user) return '';
+    if (user.name) return user.name;
+    if (user.email) return user.email.split('@')[0];
+    return 'User';
   };
+
+  const getRoleBadge = () => {
+    if (isAdmin) return 'bg-purple-100 text-purple-800';
+    if (isHandyman) return 'bg-green-100 text-green-800';
+    if (isCustomer) return 'bg-blue-100 text-blue-800';
+    return 'bg-gray-100 text-gray-800';
+  };
+
+  const getRoleLabel = () => {
+    if (isAdmin) return 'Admin';
+    if (isHandyman) return 'Handyman';
+    if (isCustomer) return 'Customer';
+    return '';
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    setIsUserMenuOpen(false);
+  };
+
+  if (isLoading) {
+    return (
+      <header className="sticky top-0 z-50 bg-white shadow-md border-b border-gray-100">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-between h-16">
+            <div className="text-2xl font-bold text-blue-600">HandyPro</div>
+            <div className="h-8 w-8 bg-gray-200 rounded-full animate-pulse"></div>
+          </div>
+        </div>
+      </header>
+    );
+  }
 
   return (
     <header className="sticky top-0 z-50 bg-white shadow-md border-b border-gray-100">
@@ -66,7 +96,7 @@ export default function Header({ userType }: HeaderProps = {}) {
 
           {/* Right side - Auth/User */}
           <div className="flex items-center space-x-4">
-            {!userType ? (
+            {!user ? (
               // Show auth buttons when not logged in
               <>
                 <Link
@@ -85,38 +115,68 @@ export default function Header({ userType }: HeaderProps = {}) {
             ) : (
               // Show user menu when logged in
               <div className="flex items-center space-x-4">
-                {/* Notification */}
-                <button className="relative p-2 text-gray-600 hover:text-blue-600 transition-colors">
-                  <Bell className="h-5 w-5" />
-                  <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full"></span>
-                </button>
+                {/* Only show notification for non-admin users */}
+                {!isAdmin && (
+                  <button className="relative p-2 text-gray-600 hover:text-blue-600 transition-colors">
+                    <Bell className="h-5 w-5" />
+                    <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full"></span>
+                  </button>
+                )}
 
                 {/* User dropdown */}
                 <div className="relative">
                   <button
                     onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                    className="flex items-center space-x-2 px-3 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-lg transition-colors"
+                    className="flex items-center space-x-3 px-3 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-lg transition-colors"
                   >
-                    <div className="h-8 w-8 bg-blue-600 rounded-full flex items-center justify-center">
-                      <User className="h-4 w-4 text-white" />
+                    {user.profilePicture ? (
+                      <img 
+                        src={user.profilePicture} 
+                        alt={user.name || 'User'}
+                        className="h-8 w-8 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="h-8 w-8 bg-blue-600 rounded-full flex items-center justify-center">
+                        <User className="h-4 w-4 text-white" />
+                      </div>
+                    )}
+                    <div className="hidden md:block text-left">
+                      <div className="font-medium text-gray-900">
+                        {getDisplayName()}
+                      </div>
+                      <div className={`text-xs px-1.5 py-0.5 rounded-full inline-block ${getRoleBadge()}`}>
+                        {getRoleLabel()}
+                      </div>
                     </div>
-                    <span className="hidden md:inline">
-                      {userType === 'admin' ? 'Admin' : userType === 'handyman' ? 'Handyman' : 'Customer'}
-                    </span>
                     <ChevronDown className="h-4 w-4" />
                   </button>
 
                   {/* Dropdown menu */}
                   {isUserMenuOpen && (
-                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
-                      <Link
-                        href="/dashboard"
-                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                        onClick={() => setIsUserMenuOpen(false)}
-                      >
-                        <User className="h-4 w-4 mr-3" />
-                        Dashboard
-                      </Link>
+                    <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+                      <div className="px-4 py-3 border-b border-gray-100">
+                        <p className="text-sm font-medium text-gray-900">{user.name || 'User'}</p>
+                        {user.email && (
+                          <p className="text-xs text-gray-500 mt-1">{user.email}</p>
+                        )}
+                        <span className={`inline-block mt-2 text-xs px-2 py-0.5 rounded-full ${getRoleBadge()}`}>
+                          {getRoleLabel()}
+                        </span>
+                      </div>
+                      
+                      {/* Only show Dashboard link for admin users */}
+                      {isAdmin && (
+                        <Link
+                          href="/admin/dashboard"
+                          className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                          onClick={() => setIsUserMenuOpen(false)}
+                        >
+                          <LayoutDashboard className="h-4 w-4 mr-3" />
+                          Admin Dashboard
+                        </Link>
+                      )}
+                      
+                      {/* Profile link for all users */}
                       <Link
                         href="/profile"
                         className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
@@ -125,6 +185,8 @@ export default function Header({ userType }: HeaderProps = {}) {
                         <User className="h-4 w-4 mr-3" />
                         Profile
                       </Link>
+                      
+                      {/* Settings link for all users */}
                       <Link
                         href="/settings"
                         className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
@@ -133,10 +195,11 @@ export default function Header({ userType }: HeaderProps = {}) {
                         <Settings className="h-4 w-4 mr-3" />
                         Settings
                       </Link>
+                      
                       <div className="border-t border-gray-100 my-1"></div>
                       <button
                         onClick={handleSignOut}
-                        className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        className="flex items-center w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
                       >
                         <LogOut className="h-4 w-4 mr-3" />
                         Sign Out
@@ -176,8 +239,20 @@ export default function Header({ userType }: HeaderProps = {}) {
                 </Link>
               ))}
               
+              {/* Only show Dashboard in mobile menu for admin */}
+              {isAdmin && (
+                <Link
+                  href="/admin/dashboard"
+                  className="block px-3 py-2 rounded-lg text-base font-medium text-gray-700 hover:bg-gray-50"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <LayoutDashboard className="h-4 w-4 inline mr-2" />
+                  Admin Dashboard
+                </Link>
+              )}
+              
               {/* Mobile auth buttons */}
-              {!userType && (
+              {!user && (
                 <div className="pt-4 space-y-2 border-t border-gray-100">
                   <Link
                     href="/signin"
@@ -193,6 +268,28 @@ export default function Header({ userType }: HeaderProps = {}) {
                   >
                     Sign Up
                   </Link>
+                </div>
+              )}
+              
+              {/* Mobile user info when logged in */}
+              {user && (
+                <div className="pt-4 border-t border-gray-100">
+                  <div className="px-3 py-2">
+                    <p className="text-sm font-medium text-gray-900">{user.name || 'User'}</p>
+                    {user.email && (
+                      <p className="text-xs text-gray-500">{user.email}</p>
+                    )}
+                    <span className={`inline-block mt-2 text-xs px-2 py-0.5 rounded-full ${getRoleBadge()}`}>
+                      {getRoleLabel()}
+                    </span>
+                  </div>
+                  <button
+                    onClick={handleSignOut}
+                    className="flex items-center w-full px-3 py-2 text-sm text-red-600 hover:bg-gray-50 rounded-lg"
+                  >
+                    <LogOut className="h-4 w-4 mr-3" />
+                    Sign Out
+                  </button>
                 </div>
               )}
             </div>

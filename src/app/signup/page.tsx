@@ -1,3 +1,4 @@
+// app/signup/page.tsx
 "use client"
 
 import { useState } from "react"
@@ -7,13 +8,15 @@ import { Button } from "@/components/ui/Button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card"
 import { Input } from "@/components/forms/Input"
 import { Label } from "@/components/forms/Label"
-import { Textarea } from "@/components/forms/Textarea" // You'll need to create this
-import { Hammer, ArrowLeft, Upload } from "lucide-react"
+import { Textarea } from "@/components/forms/Textarea"
+import { Hammer, ArrowLeft } from "lucide-react"
+import { useAuth } from "@/app/context/AuthContext"
 
 export default function SignUp() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const role = (searchParams.get("type") || "customer") as "customer" | "handyman"
+  const { signUp } = useAuth()
 
   const [formData, setFormData] = useState({
     // Basic user fields
@@ -24,7 +27,7 @@ export default function SignUp() {
     confirmPassword: "",
     address: "",
     profilePicture: "",
-    role,
+    role, // Only 'customer' or 'handyman'
     
     // Handyman profile fields
     bio: "",
@@ -36,30 +39,38 @@ export default function SignUp() {
   })
 
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
+    setError("")
 
     // Validation
     if (formData.password !== formData.confirmPassword) {
-      alert("Passwords do not match")
+      setError("Passwords do not match")
       setIsLoading(false)
       return
     }
 
     if (formData.password.length < 6) {
-      alert("Password must be at least 6 characters")
+      setError("Password must be at least 6 characters")
+      setIsLoading(false)
+      return
+    }
+
+    if (!formData.name || !formData.email) {
+      setError("Please fill in all required fields")
       setIsLoading(false)
       return
     }
 
     try {
-      // First, create the user
+      // Prepare user data for signup
       const userData = {
         name: formData.name,
         email: formData.email,
@@ -67,49 +78,23 @@ export default function SignUp() {
         password: formData.password,
         address: formData.address || undefined,
         profilePicture: formData.profilePicture || undefined,
-        role: formData.role,
+        role: formData.role, // 'customer' or 'handyman'
+        // For handyman, include additional data
+        ...(formData.role === "handyman" && {
+          bio: formData.bio || undefined,
+          skills: formData.skills ? formData.skills.split(",").map(s => s.trim()) : undefined,
+          certificate: formData.certificate || undefined,
+          idCardImage: formData.idCardImage || undefined,
+          portfolioImage: formData.portfolioImage || undefined,
+          categoryId: formData.categoryId || undefined,
+        })
       }
 
-      const userResponse = await fetch("/api/auth/signup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(userData),
-      })
-
-      const userResult = await userResponse.json()
-
-      if (userResponse.ok) {
-        // If handyman, create the handyman profile
-        if (role === "handyman") {
-          const handymanProfileData = {
-            userId: userResult.user.id,
-            bio: formData.bio || undefined,
-            skills: formData.skills || undefined,
-            certificate: formData.certificate || undefined,
-            idCardImage: formData.idCardImage || undefined,
-            portfolioImage: formData.portfolioImage || undefined,
-            categoryId: formData.categoryId || undefined,
-          }
-
-          const profileResponse = await fetch("/api/handyman/profile", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(handymanProfileData),
-          })
-
-          if (!profileResponse.ok) {
-            console.error("Failed to create handyman profile")
-            // You might want to handle this error appropriately
-          }
-        }
-
-        router.push("/signin?message=Account created successfully")
-      } else {
-        alert(userResult.error || "Signup failed")
-      }
+      await signUp(userData)
+      router.push("/")
     } catch (error) {
       console.error("Signup error:", error)
-      alert("An error occurred during signup")
+      setError(error instanceof Error ? error.message : "An error occurred during signup")
     } finally {
       setIsLoading(false)
     }
@@ -117,7 +102,7 @@ export default function SignUp() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="w-full max-w-2xl"> {/* Increased max width for more fields */}
+      <div className="w-full max-w-2xl">
         <Link href="/user-type" className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900 mb-6">
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back
@@ -133,12 +118,17 @@ export default function SignUp() {
           </CardHeader>
 
           <CardContent>
+            {error && (
+              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                {error}
+              </div>
+            )}
+            
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Basic Information Section */}
               <div>
                 <h3 className="text-lg font-semibold mb-4">Basic Information</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Name */}
                   <div className="md:col-span-2">
                     <Label htmlFor="name">Full Name *</Label>
                     <Input
@@ -151,7 +141,6 @@ export default function SignUp() {
                     />
                   </div>
 
-                  {/* Email */}
                   <div className="md:col-span-2">
                     <Label htmlFor="email">Email *</Label>
                     <Input
@@ -165,7 +154,6 @@ export default function SignUp() {
                     />
                   </div>
 
-                  {/* Phone */}
                   <div>
                     <Label htmlFor="phone">Phone Number</Label>
                     <Input
@@ -178,7 +166,6 @@ export default function SignUp() {
                     />
                   </div>
 
-                  {/* Address */}
                   <div>
                     <Label htmlFor="address">Address</Label>
                     <Input
@@ -189,19 +176,6 @@ export default function SignUp() {
                       onChange={handleChange}
                     />
                   </div>
-
-                  {/* Profile Picture */}
-                  {/* <div className="md:col-span-2">
-                    <Label htmlFor="profilePicture">Profile Picture URL</Label>
-                    <Input
-                      id="profilePicture"
-                      name="profilePicture"
-                      type="url"
-                      placeholder="https://example.com/photo.jpg"
-                      value={formData.profilePicture}
-                      onChange={handleChange}
-                    />
-                  </div> */}
                 </div>
               </div>
 
@@ -210,7 +184,6 @@ export default function SignUp() {
                 <div className="border-t pt-6">
                   <h3 className="text-lg font-semibold mb-4">Professional Information</h3>
                   <div className="space-y-4">
-                    {/* Bio */}
                     <div>
                       <Label htmlFor="bio">Bio</Label>
                       <Textarea
@@ -223,7 +196,6 @@ export default function SignUp() {
                       />
                     </div>
 
-                    {/* Skills */}
                     <div>
                       <Label htmlFor="skills">Skills</Label>
                       <Input
@@ -236,7 +208,6 @@ export default function SignUp() {
                       <p className="text-sm text-gray-500 mt-1">Separate skills with commas</p>
                     </div>
 
-                    {/* Category */}
                     <div>
                       <Label htmlFor="categoryId">Service Category</Label>
                       <Input
@@ -248,7 +219,6 @@ export default function SignUp() {
                       />
                     </div>
 
-                    {/* Certificate */}
                     <div>
                       <Label htmlFor="certificate">Certificate URL</Label>
                       <Input
@@ -261,7 +231,6 @@ export default function SignUp() {
                       />
                     </div>
 
-                    {/* ID Card Image */}
                     <div>
                       <Label htmlFor="idCardImage">ID Card Image URL</Label>
                       <Input
@@ -274,7 +243,6 @@ export default function SignUp() {
                       />
                     </div>
 
-                    {/* Portfolio Image */}
                     <div>
                       <Label htmlFor="portfolioImage">Portfolio Image URL</Label>
                       <Input

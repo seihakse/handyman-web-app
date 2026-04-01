@@ -1,88 +1,98 @@
-// src/app/api/auth/signin/route.ts
-import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/db'
-import bcrypt from 'bcryptjs'
+// app/api/auth/signin/route.ts
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/db';
+import bcrypt from 'bcryptjs';
+
+// Use Prisma's UserRole type
+import { $Enums } from '@prisma/client';
+type UserRole = $Enums.UserRole;
+
+// You can set admin credentials in environment variables
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@handypro.com';
+const ADMIN_PASSWORD_HASH = process.env.ADMIN_PASSWORD_HASH; // Pre-hashed admin password
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { email, password } = body
+    const { email, password } = await request.json();
 
-    console.log('Signin attempt for:', email)
+    // Special handling for admin
+    let user = null;
+    let isAdminUser = false;
 
-    // Validate input
-    if (!email || !password) {
-      return NextResponse.json(
-        { error: 'Email and password are required' },
-        { status: 400 }
-      )
-    }
+    if (email === ADMIN_EMAIL) {
+      // Check if admin exists in database, if not, create admin user
+      const adminUser = await prisma.user.findUnique({
+        where: { email: ADMIN_EMAIL }
+      });
 
-    // Find user in database
-    const user = await prisma.user.findUnique({
-      where: { email }
-    })
-
-    if (!user) {
-      console.log('User not found')
-      return NextResponse.json(
-        { error: 'Invalid email or password' },
-        { status: 401 }
-      )
-    }
-
-    // Check password
-    console.log('Checking password for user:', user.email)
-    const isPasswordValid = await bcrypt.compare(password, user.password)
-    
-    if (!isPasswordValid) {
-      console.log('Password invalid')
-      return NextResponse.json(
-        { error: 'Invalid email or password' },
-        { status: 401 }
-      )
-    }
-
-    console.log('Signin successful for:', user.email)
-    
-    // Return user data (without password)
-    const response = NextResponse.json({
-      success: true,
-      message: 'Sign in successful',
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        address: user.address,
-        role: user.role,
-        profilePicture: user.profilePicture
+      if (!adminUser) {
+        // Create admin user if it doesn't exist
+        const hashedPassword = await bcrypt.hash(password, 12);
+        user = await prisma.user.create({
+          data: {
+            name: 'System Admin',
+            email: ADMIN_EMAIL,
+            password: hashedPassword,
+            role: 'admin' as UserRole,
+            phone: null,
+            address: null,
+          }
+        });
+        isAdminUser = true;
+      } else {
+        user = adminUser;
+        const isValid = await bcrypt.compare(password, user.password);
+        if (!isValid) {
+          return NextResponse.json(
+            { error: 'Invalid credentials' },
+            { status: 401 }
+          );
+        }
+        isAdminUser = user.role === ('admin' as UserRole);
       }
-    }, { status: 200 })
+    } else {
+      // Regular user authentication
+      user = await prisma.user.findUnique({
+        where: { email },
+      });
 
-    // Set user data in cookie for server-side access
+      if (!user) {
+        return NextResponse.json(
+          { error: 'Invalid credentials' },
+          { status: 401 }
+        );
+      }
+
+      const isValidPassword = await bcrypt.compare(password, user.password);
+      if (!isValidPassword) {
+        return NextResponse.json(
+          { error: 'Invalid credentials' },
+          { status: 401 }
+        );
+      }
+    }
+
+    // Remove password from response
+    const { password: _, ...userWithoutPassword } = user;
+
+    const response = NextResponse.json(userWithoutPassword);
+    
+    // Set session cookie
     response.cookies.set({
-      name: 'current-user',
-      value: JSON.stringify({
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        profilePicture: user.profilePicture
-      }),
+      name: 'session',
+      value: JSON.stringify({ userId: user.id, role: user.role }),
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      maxAge: 60 * 60 * 24 * 7, // 7 days
-      path: '/'
-    })
+      maxAge: 60 * 60 * 24 * 7,
+      path: '/',
+    });
 
-    return response
-
+    return response;
   } catch (error) {
-    console.error('Signin error:', error)
+    console.error('Sign in error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
-    )
+    );
   }
 }

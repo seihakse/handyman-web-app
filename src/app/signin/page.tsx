@@ -1,4 +1,4 @@
-//
+// app/signin/page.tsx
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -9,11 +9,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/forms/Input'
 import { Label } from '@/components/forms/Label'
 import { Hammer, ArrowLeft } from 'lucide-react'
+import { useAuth } from '@/app/context/AuthContext' // Import useAuth
 
 export default function SignIn() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const message = searchParams.get('message')
+  const { signIn } = useAuth() // Get signIn function from auth context
   
   const [formData, setFormData] = useState({
     email: '',
@@ -21,6 +23,7 @@ export default function SignIn() {
   })
   const [isLoading, setIsLoading] = useState(false)
   const [successMessage, setSuccessMessage] = useState('')
+  const [error, setError] = useState('')
 
   useEffect(() => {
     if (message) {
@@ -31,24 +34,16 @@ export default function SignIn() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
+    setError('') // Clear previous errors
 
     try {
-      const response = await fetch('/api/auth/signin', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      })
-
-      if (response.ok) {
-        router.push('/')
-      } else {
-        const error = await response.json()
-        alert(error.error || 'Invalid credentials')
-      }
+      // Use the signIn function from auth context instead of direct fetch
+      await signIn(formData.email, formData.password)
+      // After successful sign in, redirect to home or dashboard
+      router.push('/')
     } catch (error) {
-      alert('Something went wrong')
+      // Handle error from signIn function
+      setError(error instanceof Error ? error.message : 'Invalid credentials')
     } finally {
       setIsLoading(false)
     }
@@ -64,7 +59,7 @@ export default function SignIn() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <Link href="/signup" className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900 mb-6">
+        <Link href="/" className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900 mb-6">
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to home
         </Link>
@@ -83,6 +78,12 @@ export default function SignIn() {
             {successMessage && (
               <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
                 {successMessage}
+              </div>
+            )}
+            
+            {error && (
+              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                {error}
               </div>
             )}
             

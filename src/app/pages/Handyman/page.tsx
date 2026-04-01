@@ -154,9 +154,9 @@ export default function HandymanPage() {
                       </div>
                     </div>
                   </div>
-                  <div className={`${handyman.statusColor} w-6 h-6 rounded-full flex items-center justify-center`}>
+                  {/* <div className={`${handyman.statusColor} w-6 h-6 rounded-full flex items-center justify-center`}>
                     <div className="w-2 h-2 bg-white rounded-full" />
-                  </div>
+                  </div> */}
                 </div>
 
                 {/* Status Badge */}
