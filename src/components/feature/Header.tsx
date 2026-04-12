@@ -22,9 +22,9 @@ export default function Header() {
 
   const navigation = [
     { name: 'Home', path: '/' },
-    { name: 'Services', path: '/pages/Services' },
-    { name: 'Process', path: '/pages/Process' },
-    { name: 'Handyman', path: '/pages/Handyman' },
+    { name: 'Services', path: '/service' },
+    { name: 'Process', path: '/process' },
+    { name: 'Handyman', path: '/handyman' },
   ];
 
   const getDisplayName = () => {

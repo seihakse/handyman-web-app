@@ -1,17 +1,19 @@
-// src/app/handyman/page.tsx
-import { MapPin, Star, Clock, MessageCircle, User, Shield, Wrench, Zap, Hammer, Paintbrush, Search, CheckCircle, Award, ThumbsUp } from 'lucide-react';
+// app/handyman/page.tsx
+'use client';
+
+import { MapPin, Star, User, Shield, Wrench, Zap, Hammer, Paintbrush } from 'lucide-react';
+import Link from 'next/link';
 import Header from '@/components/feature/Header';
 import Footer from '@/components/feature/Footer';
 
 const handymen = [
   {
+    id: 'john-smith',
     name: "John Smith",
     location: "New York, NY",
     rating: 4.7,
     reviews: 128,
     status: "Active Now",
-    statusColor: "bg-green-500",
-    image: "J",
     profession: "Plumber",
     experience: "8 years",
     description: "Licensed plumber with 8 years of experience. Specializing in pipe repairs, installations, and emergency services.",
@@ -19,13 +21,12 @@ const handymen = [
     verified: true
   },
   {
+    id: 'maria-garcia',
     name: "Maria Garcia",
     location: "Los Angeles, CA",
     rating: 5.0,
     reviews: 94,
     status: "Active Now",
-    statusColor: "bg-green-500",
-    image: "M",
     profession: "Electrician",
     experience: "12 years",
     description: "Certified electrician with 12 years of experience. Expert in residential wiring, lighting, and electrical repairs.",
@@ -33,13 +34,12 @@ const handymen = [
     verified: true
   },
   {
+    id: 'robert-johnson',
     name: "Robert Johnson",
     location: "Chicago, IL",
     rating: 4.2,
     reviews: 76,
     status: "Currently Unavailable",
-    statusColor: "bg-gray-500",
-    image: "R",
     profession: "Carpenter",
     experience: "15 years",
     description: "Master carpenter with 15 years experience. Specializing in custom furniture, cabinetry, and home renovations.",
@@ -47,13 +47,12 @@ const handymen = [
     verified: true
   },
   {
+    id: 'sarah-wilson',
     name: "Sarah Wilson",
     location: "Miami, FL",
     rating: 4.6,
     reviews: 203,
     status: "Active Now",
-    statusColor: "bg-green-500",
-    image: "S",
     profession: "Painter",
     experience: "10 years",
     description: "Professional painter with 10 years of experience. Expert in interior, exterior, and decorative painting services.",
@@ -64,17 +63,9 @@ const handymen = [
 
 const categories = ["Electrical", "Plumbing", "Carpentry", "Painting"];
 
-const stats = [
-  { number: "500+", label: "Verified Professionals" },
-  { number: "4.8", label: "Average Rating" },
-  { number: "10,000+", label: "Jobs Completed" },
-  { number: "98%", label: "Customer Satisfaction" }
-];
-
 export default function HandymanPage() {
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
       <Header />
       
       {/* Hero Section */}
@@ -93,43 +84,42 @@ export default function HandymanPage() {
         </div>
       </section>
 
-
       {/* Handyman Grid */}
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div>
-              <h2 className="text-3xl lg:text-4xl font-bold text-blue-600 mb-2">
-                Browse by Category
-              </h2>
-              <p className="text-gray-600">
-                Find handymen specializing in your specific needs
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="text-lg font-medium text-gray-900">125 Handymen Available</p>
-            </div>
+          <div>
+            <h2 className="text-3xl lg:text-4xl font-bold text-blue-600 mb-2">
+              Browse by Category
+            </h2>
+            <p className="text-gray-600">
+              Find handymen specializing in your specific needs
+            </p>
           </div>
+          <div className="text-right">
+            <p className="text-lg font-medium text-gray-900">125 Handymen Available</p>
+          </div>
+        </div>
 
-          {/* Categories */}
-          <div className="flex flex-wrap gap-3 mt-6 py-8">
-            <button className="px-6 py-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center">
-              <Hammer className="w-4 h-4 mr-2" />
-              All Services
-            </button>
-            {categories.map((category, index) => {
-              const icons = [Zap, Wrench, Hammer, Paintbrush];
-              const Icon = icons[index];
-              return (
-                <button
-                  key={index}
-                  className="px-6 py-3 bg-blue-50 text-blue-600 rounded-lg text-sm font-medium hover:bg-blue-100 transition-colors flex items-center"
-                >
-                  <Icon className="w-4 h-4 mr-2" />
-                  {category}
-                </button>
-              );
-            })}
-          </div>
+        {/* Categories */}
+        <div className="flex flex-wrap gap-3 mt-6 py-8">
+          <button className="px-6 py-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center">
+            <Hammer className="w-4 h-4 mr-2" />
+            All Services
+          </button>
+          {categories.map((category, index) => {
+            const icons = [Zap, Wrench, Hammer, Paintbrush];
+            const Icon = icons[index];
+            return (
+              <button
+                key={index}
+                className="px-6 py-3 bg-blue-50 text-blue-600 rounded-lg text-sm font-medium hover:bg-blue-100 transition-colors flex items-center"
+              >
+                <Icon className="w-4 h-4 mr-2" />
+                {category}
+              </button>
+            );
+          })}
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {handymen.map((handyman, index) => (
@@ -138,8 +128,7 @@ export default function HandymanPage() {
               <div className="p-6 border-b border-gray-100">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center space-x-4">
-                    {/* Replace the empty div with this */}
-                    <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-300">
+                    <div className="w-16 h-16 rounded-full overflow-hidden bg-blue-600">
                       <img 
                         src={`https://ui-avatars.com/api/?name=${encodeURIComponent(handyman.name)}&background=3B82F6&color=fff&bold=true&size=64`}
                         alt={handyman.name}
@@ -154,9 +143,6 @@ export default function HandymanPage() {
                       </div>
                     </div>
                   </div>
-                  {/* <div className={`${handyman.statusColor} w-6 h-6 rounded-full flex items-center justify-center`}>
-                    <div className="w-2 h-2 bg-white rounded-full" />
-                  </div> */}
                 </div>
 
                 {/* Status Badge */}
@@ -225,13 +211,14 @@ export default function HandymanPage() {
               <div className="p-6 pt-0">
                 <div className="grid grid-cols-2 gap-3">
                   <button className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-lg flex items-center justify-center transition-colors">
-                    <MessageCircle className="w-4 h-4 mr-2" />
                     Contact
                   </button>
-                  <button className="bg-gray-50 hover:bg-gray-100 text-gray-900 font-medium py-3 rounded-lg border border-gray-200 flex items-center justify-center transition-colors">
-                    <User className="w-4 h-4 mr-1" />
+                  <Link 
+                    href={`/handyman/${handyman.id}`}
+                    className="bg-gray-50 hover:bg-gray-100 text-gray-900 font-medium py-3 rounded-lg border border-gray-200 flex items-center justify-center transition-colors text-center"
+                  >
                     View Profile
-                  </button>
+                  </Link>
                 </div>
               </div>
             </div>
@@ -246,8 +233,6 @@ export default function HandymanPage() {
         </div>
       </div>
 
-
-      {/* Footer */}
       <Footer />
     </div>
   );
