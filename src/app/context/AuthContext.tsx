@@ -22,6 +22,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (userData: any) => Promise<void>;
   signOut: () => void;
+  updateUser: (updates: Partial<User>) => void; // ✅ Added
   hasRole: (roles: string[]) => boolean;
   isAdmin: boolean;
   isHandyman: boolean;
@@ -43,7 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const parsedUser = JSON.parse(storedUser);
           setUser(parsedUser);
         }
-        
+
         // Also check for cookie-based session
         const response = await fetch('/api/auth/session');
         if (response.ok) {
@@ -63,92 +64,98 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     checkAuth();
   }, []);
 
-// app/context/AuthContext.tsx - Ensure admin role is properly set
-const signIn = async (email: string, password: string) => {
-  setIsLoading(true);
-  try {
-    const response = await fetch('/api/auth/signin', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
+  // ✅ updateUser — merges partial updates into the current user,
+  //    persists to localStorage, and re-renders anything using useAuth()
+  const updateUser = (updates: Partial<User>) => {
+    setUser(prev => {
+      if (!prev) return prev;
+      const updated = { ...prev, ...updates };
+      localStorage.setItem('user', JSON.stringify(updated));
+      return updated;
     });
+  };
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Sign in failed');
+  const signIn = async (email: string, password: string) => {
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/auth/signin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Sign in failed');
+      }
+
+      const userData = await response.json();
+
+      const formattedUser: User = {
+        id: userData.id,
+        name: userData.name,
+        email: userData.email,
+        phone: userData.phone,
+        address: userData.address,
+        role: userData.role,
+        userType: userData.role,
+        profilePicture: userData.profilePicture,
+        createdAt: userData.createdAt,
+      };
+
+      setUser(formattedUser);
+      localStorage.setItem('user', JSON.stringify(formattedUser));
+
+      if (formattedUser.role === 'admin') {
+        router.push('/admin/dashboard');
+      } else {
+        router.push('/');
+      }
+    } catch (error) {
+      console.error('Sign in error:', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
     }
+  };
 
-    const userData = await response.json();
-    
-    const formattedUser: User = {
-      id: userData.id,
-      name: userData.name,
-      email: userData.email,
-      phone: userData.phone,
-      address: userData.address,
-      role: userData.role, // This will be 'admin' for admin users
-      userType: userData.role, // For backward compatibility
-      profilePicture: userData.profilePicture,
-      createdAt: userData.createdAt,
-    };
-    
-    setUser(formattedUser);
-    localStorage.setItem('user', JSON.stringify(formattedUser));
-    
-    // Only redirect admin to dashboard
-    if (formattedUser.role === 'admin') {
-      router.push('/admin/dashboard');
-    } else {
-      router.push('/'); // Regular users go to home page
+  const signUp = async (userData: any) => {
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(userData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Sign up failed');
+      }
+
+      const formattedUser: User = {
+        id: data.user?.id || data.id,
+        name: data.user?.name || data.name,
+        email: data.user?.email || data.email,
+        phone: data.user?.phone || data.phone,
+        address: data.user?.address || data.address,
+        role: data.user?.role || data.role || 'customer',
+        userType: data.user?.role || data.role || 'customer',
+        profilePicture: data.user?.profilePicture || data.profilePicture,
+        createdAt: data.user?.createdAt || data.createdAt,
+      };
+
+      setUser(formattedUser);
+      localStorage.setItem('user', JSON.stringify(formattedUser));
+      router.push('/');
+    } catch (error) {
+      console.error('Sign up error:', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
     }
-    
-  } catch (error) {
-    console.error('Sign in error:', error);
-    throw error;
-  } finally {
-    setIsLoading(false);
-  }
-};
-
-const signUp = async (userData: any) => {
-  setIsLoading(true);
-  try {
-    const response = await fetch('/api/auth/signup', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(userData),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.error || 'Sign up failed');
-    }
-
-    // Regular users (customer/handyman) - no admin signup through this route
-    const formattedUser: User = {
-      id: data.user?.id || data.id,
-      name: data.user?.name || data.name,
-      email: data.user?.email || data.email,
-      phone: data.user?.phone || data.phone,
-      address: data.user?.address || data.address,
-      role: data.user?.role || data.role || 'customer',
-      userType: data.user?.role || data.role || 'customer',
-      profilePicture: data.user?.profilePicture || data.profilePicture,
-      createdAt: data.user?.createdAt || data.createdAt,
-    };
-    
-    setUser(formattedUser);
-    localStorage.setItem('user', JSON.stringify(formattedUser));
-    router.push('/'); // Regular users go to home page
-    
-  } catch (error) {
-    console.error('Sign up error:', error);
-    throw error;
-  } finally {
-    setIsLoading(false);
-  }
-};
+  };
 
   const signOut = async () => {
     try {
@@ -172,16 +179,17 @@ const signUp = async (userData: any) => {
   const isCustomer = user?.role === 'customer';
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      isLoading, 
-      signIn, 
-      signUp, 
+    <AuthContext.Provider value={{
+      user,
+      isLoading,
+      signIn,
+      signUp,
       signOut,
+      updateUser, // ✅ exposed
       hasRole,
       isAdmin,
       isHandyman,
-      isCustomer
+      isCustomer,
     }}>
       {children}
     </AuthContext.Provider>

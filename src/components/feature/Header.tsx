@@ -1,14 +1,14 @@
 // components/feature/Header.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { Menu, X, Bell, User, LogOut, Settings, ChevronDown, LayoutDashboard } from 'lucide-react';
 import { Pacifico } from "next/font/google";
 import { useAuth } from '@/app/context/AuthContext';
 
-export const pacifico = Pacifico({
+const pacifico = Pacifico({
   weight: "400",
   subsets: ["latin"],
 });
@@ -17,7 +17,7 @@ export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const pathname = usePathname();
-  const router = useRouter();
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const { user, signOut, isLoading, isAdmin, isHandyman, isCustomer } = useAuth();
 
   const navigation = [
@@ -26,6 +26,23 @@ export default function Header() {
     { name: 'Process', path: '/process' },
     { name: 'Handyman', path: '/handyman' },
   ];
+
+  // FIX 1: Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsUserMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // FIX 2: Close both menus on route change
+  useEffect(() => {
+    setIsMenuOpen(false);
+    setIsUserMenuOpen(false);
+  }, [pathname]);
 
   const getDisplayName = () => {
     if (!user) return '';
@@ -51,6 +68,7 @@ export default function Header() {
   const handleSignOut = async () => {
     await signOut();
     setIsUserMenuOpen(false);
+    setIsMenuOpen(false);
   };
 
   if (isLoading) {
@@ -58,7 +76,8 @@ export default function Header() {
       <header className="sticky top-0 z-50 bg-white shadow-md border-b border-gray-100">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
-            <div className="text-2xl font-bold text-blue-600">HandyPro</div>
+            {/* FIX 3: Use pacifico.className in loading state too */}
+            <div className={`text-2xl font-bold text-blue-600 ${pacifico.className}`}>HandyPro</div>
             <div className="h-8 w-8 bg-gray-200 rounded-full animate-pulse"></div>
           </div>
         </div>
@@ -70,9 +89,10 @@ export default function Header() {
     <header className="sticky top-0 z-50 bg-white shadow-md border-b border-gray-100">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
-          {/* Logo */}
+
+          {/* Logo — FIX 3: use pacifico.className instead of inline style */}
           <Link href="/" className="flex items-center">
-            <span className="text-2xl font-bold text-blue-600" style={{ fontFamily: '"Pacifico", cursive' }}>
+            <span className={`text-2xl font-bold text-blue-600 ${pacifico.className}`}>
               HandyPro
             </span>
           </Link>
@@ -97,7 +117,6 @@ export default function Header() {
           {/* Right side - Auth/User */}
           <div className="flex items-center space-x-4">
             {!user ? (
-              // Show auth buttons when not logged in
               <>
                 <Link
                   href="/signin"
@@ -113,9 +132,8 @@ export default function Header() {
                 </Link>
               </>
             ) : (
-              // Show user menu when logged in
               <div className="flex items-center space-x-4">
-                {/* Only show notification for non-admin users */}
+                {/* Notification bell — non-admin only */}
                 {!isAdmin && (
                   <button className="relative p-2 text-gray-600 hover:text-blue-600 transition-colors">
                     <Bell className="h-5 w-5" />
@@ -123,15 +141,15 @@ export default function Header() {
                   </button>
                 )}
 
-                {/* User dropdown */}
-                <div className="relative">
+                {/* FIX 1: User dropdown with ref for click-outside */}
+                <div className="relative" ref={dropdownRef}>
                   <button
                     onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
                     className="flex items-center space-x-3 px-3 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-lg transition-colors"
                   >
                     {user.profilePicture ? (
-                      <img 
-                        src={user.profilePicture} 
+                      <img
+                        src={user.profilePicture}
                         alt={user.name || 'User'}
                         className="h-8 w-8 rounded-full object-cover"
                       />
@@ -141,14 +159,13 @@ export default function Header() {
                       </div>
                     )}
                     <div className="hidden md:block text-left">
-                      <div className="font-medium text-gray-900">
-                        {getDisplayName()}
-                      </div>
+                      <div className="font-medium text-gray-900">{getDisplayName()}</div>
                       <div className={`text-xs px-1.5 py-0.5 rounded-full inline-block ${getRoleBadge()}`}>
                         {getRoleLabel()}
                       </div>
                     </div>
-                    <ChevronDown className="h-4 w-4" />
+                    {/* FIX 4: Rotate chevron when open */}
+                    <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isUserMenuOpen ? 'rotate-180' : ''}`} />
                   </button>
 
                   {/* Dropdown menu */}
@@ -157,14 +174,13 @@ export default function Header() {
                       <div className="px-4 py-3 border-b border-gray-100">
                         <p className="text-sm font-medium text-gray-900">{user.name || 'User'}</p>
                         {user.email && (
-                          <p className="text-xs text-gray-500 mt-1">{user.email}</p>
+                          <p className="text-xs text-gray-500 mt-1 truncate">{user.email}</p>
                         )}
                         <span className={`inline-block mt-2 text-xs px-2 py-0.5 rounded-full ${getRoleBadge()}`}>
                           {getRoleLabel()}
                         </span>
                       </div>
-                      
-                      {/* Only show Dashboard link for admin users */}
+
                       {isAdmin && (
                         <Link
                           href="/admin/dashboard"
@@ -175,18 +191,16 @@ export default function Header() {
                           Admin Dashboard
                         </Link>
                       )}
-                      
-                      {/* Profile link for all users */}
-                      <Link
+
+                      {/* <Link
                         href="/profile"
                         className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                         onClick={() => setIsUserMenuOpen(false)}
                       >
                         <User className="h-4 w-4 mr-3" />
                         Profile
-                      </Link>
-                      
-                      {/* Settings link for all users */}
+                      </Link> */}
+
                       <Link
                         href="/settings"
                         className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
@@ -195,7 +209,7 @@ export default function Header() {
                         <Settings className="h-4 w-4 mr-3" />
                         Settings
                       </Link>
-                      
+
                       <div className="border-t border-gray-100 my-1"></div>
                       <button
                         onClick={handleSignOut}
@@ -238,19 +252,39 @@ export default function Header() {
                   {item.name}
                 </Link>
               ))}
-              
-              {/* Only show Dashboard in mobile menu for admin */}
-              {isAdmin && (
-                <Link
-                  href="/admin/dashboard"
-                  className="block px-3 py-2 rounded-lg text-base font-medium text-gray-700 hover:bg-gray-50"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  <LayoutDashboard className="h-4 w-4 inline mr-2" />
-                  Admin Dashboard
-                </Link>
+
+              {/* FIX 5: Mobile logged-in links — Profile, Settings, Dashboard */}
+              {user && (
+                <>
+                  {isAdmin && (
+                    <Link
+                      href="/admin/dashboard"
+                      className="flex items-center px-3 py-2 rounded-lg text-base font-medium text-gray-700 hover:bg-gray-50"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <LayoutDashboard className="h-4 w-4 mr-2" />
+                      Admin Dashboard
+                    </Link>
+                  )}
+                  <Link
+                    href="/profile"
+                    className="flex items-center px-3 py-2 rounded-lg text-base font-medium text-gray-700 hover:bg-gray-50"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <User className="h-4 w-4 mr-2" />
+                    Profile
+                  </Link>
+                  <Link
+                    href="/settings"
+                    className="flex items-center px-3 py-2 rounded-lg text-base font-medium text-gray-700 hover:bg-gray-50"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <Settings className="h-4 w-4 mr-2" />
+                    Settings
+                  </Link>
+                </>
               )}
-              
+
               {/* Mobile auth buttons */}
               {!user && (
                 <div className="pt-4 space-y-2 border-t border-gray-100">
@@ -270,14 +304,14 @@ export default function Header() {
                   </Link>
                 </div>
               )}
-              
-              {/* Mobile user info when logged in */}
+
+              {/* Mobile user info + sign out */}
               {user && (
                 <div className="pt-4 border-t border-gray-100">
                   <div className="px-3 py-2">
                     <p className="text-sm font-medium text-gray-900">{user.name || 'User'}</p>
                     {user.email && (
-                      <p className="text-xs text-gray-500">{user.email}</p>
+                      <p className="text-xs text-gray-500 truncate">{user.email}</p>
                     )}
                     <span className={`inline-block mt-2 text-xs px-2 py-0.5 rounded-full ${getRoleBadge()}`}>
                       {getRoleLabel()}

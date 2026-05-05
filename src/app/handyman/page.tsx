@@ -1,236 +1,264 @@
 // app/handyman/page.tsx
 'use client';
 
-import { MapPin, Star, User, Shield, Wrench, Zap, Hammer, Paintbrush } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { MapPin, Star, Shield, Wrench, Zap, Hammer, Paintbrush, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import Header from '@/components/feature/Header';
 import Footer from '@/components/feature/Footer';
 
-const handymen = [
-  {
-    id: 'john-smith',
-    name: "John Smith",
-    location: "New York, NY",
-    rating: 4.7,
-    reviews: 128,
-    status: "Active Now",
-    profession: "Plumber",
-    experience: "8 years",
-    description: "Licensed plumber with 8 years of experience. Specializing in pipe repairs, installations, and emergency services.",
-    skills: ["Plumbing", "Pipe Repair", "Installation", "Emergency"],
-    verified: true
-  },
-  {
-    id: 'maria-garcia',
-    name: "Maria Garcia",
-    location: "Los Angeles, CA",
-    rating: 5.0,
-    reviews: 94,
-    status: "Active Now",
-    profession: "Electrician",
-    experience: "12 years",
-    description: "Certified electrician with 12 years of experience. Expert in residential wiring, lighting, and electrical repairs.",
-    skills: ["Electrical", "Wiring", "Lighting", "Repairs"],
-    verified: true
-  },
-  {
-    id: 'robert-johnson',
-    name: "Robert Johnson",
-    location: "Chicago, IL",
-    rating: 4.2,
-    reviews: 76,
-    status: "Currently Unavailable",
-    profession: "Carpenter",
-    experience: "15 years",
-    description: "Master carpenter with 15 years experience. Specializing in custom furniture, cabinetry, and home renovations.",
-    skills: ["Carpentry", "Furniture", "Cabinetry", "Renovations"],
-    verified: true
-  },
-  {
-    id: 'sarah-wilson',
-    name: "Sarah Wilson",
-    location: "Miami, FL",
-    rating: 4.6,
-    reviews: 203,
-    status: "Active Now",
-    profession: "Painter",
-    experience: "10 years",
-    description: "Professional painter with 10 years of experience. Expert in interior, exterior, and decorative painting services.",
-    skills: ["Painting", "Interior", "Exterior", "Decorative"],
-    verified: true
-  }
-];
+interface Handyman {
+  id: string;
+  name: string;
+  profilePicture: string | null;
+  address: string | null;
+  handymanProfile: {
+    bio: string | null;
+    skills: string | null;
+    availability: 'AVAILABLE' | 'BUSY' | 'UNAVAILABLE';
+    rating: number | null;
+    totalReviews: number;
+    isApproved: boolean;
+    yearsOfExperience: number | null;
+    serviceArea: string | null;
+    telegramUsername: string | null;
+  };
+}
 
-const categories = ["Electrical", "Plumbing", "Carpentry", "Painting"];
+const availabilityConfig = {
+  AVAILABLE:   { label: 'Available Now',        classes: 'bg-green-100 text-green-700'   },
+  BUSY:        { label: 'Currently Busy',        classes: 'bg-yellow-100 text-yellow-700' },
+  UNAVAILABLE: { label: 'Currently Unavailable', classes: 'bg-gray-100 text-gray-700'    },
+};
+
+const categories = ['All Services', 'Electrical', 'Plumbing', 'Carpentry', 'Painting'];
+const icons      = [Hammer, Zap, Wrench, Hammer, Paintbrush];
 
 export default function HandymanPage() {
+  const [handymen, setHandymen]           = useState<Handyman[]>([]);
+  const [filtered, setFiltered]           = useState<Handyman[]>([]);
+  const [loading, setLoading]             = useState(true);
+  const [activeCategory, setActiveCategory] = useState('All Services');
+
+  useEffect(() => {
+    fetch('/api/handyman')
+      .then(res => res.json())
+      .then(data => {
+        setHandymen(data);
+        setFiltered(data);
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, []);
+
+  const handleCategory = (cat: string) => {
+    setActiveCategory(cat);
+    if (cat === 'All Services') {
+      setFiltered(handymen);
+    } else {
+      setFiltered(
+        handymen.filter(h =>
+          h.handymanProfile.skills
+            ?.toLowerCase()
+            .includes(cat.toLowerCase())
+        )
+      );
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
-      
-      {/* Hero Section */}
-      <section 
+
+      {/* Hero */}
+      <section
         className="relative bg-cover bg-center py-20 md:py-32"
         style={{
-          backgroundImage: 'linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url(https://t4.ftcdn.net/jpg/01/78/14/57/360_F_178145745_oDRli4ickV2rfj7gJxN1rWd6wfN3OJy2.jpg)',
+          backgroundImage:
+            'linear-gradient(rgba(0,0,0,0.6),rgba(0,0,0,0.6)), url(https://t4.ftcdn.net/jpg/01/78/14/57/360_F_178145745_oDRli4ickV2rfj7gJxN1rWd6wfN3OJy2.jpg)',
         }}
       >
         <div className="absolute inset-0 bg-black/40" />
-        <div className="relative container mx-auto px-4 h-full flex flex-col items-center justify-center text-center">
-          <h1 className="text-5xl font-bold text-white mb-4">Our Handyman</h1>
-          <p className="text-xl text-gray-200 max-w-3xl">
-            Getting professional home services has never been easier. Please find and connect with trusted handymen in your area.
+        <div className="relative container mx-auto px-4 text-center">
+          <h1 className="text-5xl font-bold text-white mb-4">Our Handymen</h1>
+          <p className="text-xl text-gray-200 max-w-3xl mx-auto">
+            Getting professional home services has never been easier. Find and connect with trusted handymen in your area.
           </p>
         </div>
       </section>
 
-      {/* Handyman Grid */}
+      {/* Grid */}
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>
-            <h2 className="text-3xl lg:text-4xl font-bold text-blue-600 mb-2">
-              Browse by Category
-            </h2>
-            <p className="text-gray-600">
-              Find handymen specializing in your specific needs
-            </p>
+            <h2 className="text-3xl lg:text-4xl font-bold text-blue-600 mb-2">Browse by Category</h2>
+            <p className="text-gray-600">Find handymen specializing in your specific needs</p>
           </div>
-          <div className="text-right">
-            <p className="text-lg font-medium text-gray-900">125 Handymen Available</p>
-          </div>
+          <p className="text-lg font-medium text-gray-900">
+            {filtered.length} Handyman{filtered.length !== 1 ? 's' : ''} Available
+          </p>
         </div>
 
-        {/* Categories */}
-        <div className="flex flex-wrap gap-3 mt-6 py-8">
-          <button className="px-6 py-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center">
-            <Hammer className="w-4 h-4 mr-2" />
-            All Services
-          </button>
-          {categories.map((category, index) => {
-            const icons = [Zap, Wrench, Hammer, Paintbrush];
-            const Icon = icons[index];
+        {/* Category filters */}
+        <div className="flex flex-wrap gap-3 mt-6 py-6">
+          {categories.map((cat, i) => {
+            const Icon = icons[i];
+            const active = activeCategory === cat;
             return (
               <button
-                key={index}
-                className="px-6 py-3 bg-blue-50 text-blue-600 rounded-lg text-sm font-medium hover:bg-blue-100 transition-colors flex items-center"
+                key={cat}
+                onClick={() => handleCategory(cat)}
+                className={`px-6 py-3 rounded-lg text-sm font-medium flex items-center transition-colors ${
+                  active
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
+                }`}
               >
                 <Icon className="w-4 h-4 mr-2" />
-                {category}
+                {cat}
               </button>
             );
           })}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {handymen.map((handyman, index) => (
-            <div key={index} className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
-              {/* Profile Header */}
-              <div className="p-6 border-b border-gray-100">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-16 h-16 rounded-full overflow-hidden bg-blue-600">
-                      <img 
-                        src={`https://ui-avatars.com/api/?name=${encodeURIComponent(handyman.name)}&background=3B82F6&color=fff&bold=true&size=64`}
-                        alt={handyman.name}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-bold text-gray-900">{handyman.name}</h3>
-                      <div className="flex items-center text-gray-600 mt-1">
-                        <MapPin className="w-4 h-4 mr-1" />
-                        <span className="text-sm">{handyman.location}</span>
+        {/* Loading */}
+        {loading && (
+          <div className="flex justify-center py-20">
+            <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
+          </div>
+        )}
+
+        {/* Empty */}
+        {!loading && filtered.length === 0 && (
+          <div className="text-center py-20 text-gray-400">
+            <Wrench className="w-12 h-12 mx-auto mb-3 opacity-40" />
+            <p className="text-lg">No handymen found for this category.</p>
+          </div>
+        )}
+
+        {/* Cards */}
+        {!loading && filtered.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {filtered.map(handyman => {
+              const profile = handyman.handymanProfile;
+              const skills  = profile.skills?.split(',').map(s => s.trim()).filter(Boolean) ?? [];
+              const rating  = profile.rating ?? 0;
+              const avail   = availabilityConfig[profile.availability] ?? availabilityConfig.UNAVAILABLE;
+              const location = profile.serviceArea || handyman.address || '';
+
+              return (
+                <div
+                  key={handyman.id}
+                  className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow flex flex-col"
+                >
+                  {/* Header */}
+                  <div className="p-6 border-b border-gray-100">
+                    <div className="flex items-start gap-4">
+                      <div className="w-16 h-16 rounded-full overflow-hidden bg-blue-600 shrink-0">
+                        {handyman.profilePicture ? (
+                          <img src={handyman.profilePicture} alt={handyman.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-white text-2xl font-bold">
+                            {handyman.name.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="text-xl font-bold text-gray-900 truncate">{handyman.name}</h3>
+                        {location && (
+                          <div className="flex items-center text-gray-600 mt-1">
+                            <MapPin className="w-4 h-4 mr-1 shrink-0" />
+                            <span className="text-sm truncate">{location}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
-                  </div>
-                </div>
 
-                {/* Status Badge */}
-                <div className="mt-4">
-                  <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
-                    handyman.status === "Active Now" 
-                      ? "bg-green-100 text-green-700" 
-                      : "bg-gray-100 text-gray-700"
-                  }`}>
-                    {handyman.status}
-                  </span>
-                </div>
-
-                {/* Rating */}
-                <div className="flex items-center mt-4">
-                  <div className="flex items-center">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} className={`w-5 h-5 ${
-                        i < Math.floor(handyman.rating) 
-                          ? "text-yellow-400 fill-yellow-400" 
-                          : "text-gray-300"
-                      }`} />
-                    ))}
-                  </div>
-                  <span className="ml-2 font-bold text-gray-900">{handyman.rating}</span>
-                  <span className="ml-2 text-gray-600">({handyman.reviews} reviews)</span>
-                </div>
-              </div>
-
-              {/* Details */}
-              <div className="p-6">
-                <div className="mb-6">
-                  <h4 className="font-bold text-gray-900 mb-2 flex items-center">
-                    <User className="w-4 h-4 mr-2" />
-                    About
-                  </h4>
-                  <p className="text-gray-600 text-sm">{handyman.description}</p>
-                </div>
-
-                <div className="mb-6">
-                  <h4 className="font-bold text-gray-900 mb-2 flex items-center">
-                    <Wrench className="w-4 h-4 mr-2" />
-                    Services
-                  </h4>
-                  <div className="flex flex-wrap gap-2">
-                    {handyman.skills.map((skill, idx) => (
-                      <span
-                        key={idx}
-                        className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-xs font-medium"
-                      >
-                        {skill}
+                    <div className="mt-4">
+                      <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${avail.classes}`}>
+                        {avail.label}
                       </span>
-                    ))}
+                    </div>
+
+                    <div className="flex items-center mt-4 gap-1">
+                      {[...Array(5)].map((_, i) => (
+                        <Star key={i} className={`w-5 h-5 ${
+                          i < Math.floor(rating) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'
+                        }`} />
+                      ))}
+                      <span className="ml-2 font-bold text-gray-900">{rating.toFixed(1)}</span>
+                      <span className="ml-1 text-gray-500 text-sm">({profile.totalReviews})</span>
+                    </div>
+                  </div>
+
+                  {/* Details */}
+                  <div className="p-6 flex-1">
+                    {profile.bio && (
+                      <div className="mb-5">
+                        <h4 className="font-bold text-gray-900 mb-1.5 text-sm">About</h4>
+                        <p className="text-gray-600 text-sm line-clamp-3">{profile.bio}</p>
+                      </div>
+                    )}
+
+                    {skills.length > 0 && (
+                      <div className="mb-5">
+                        <h4 className="font-bold text-gray-900 mb-2 flex items-center gap-1.5 text-sm">
+                          <Wrench className="w-3.5 h-3.5" /> Services
+                        </h4>
+                        <div className="flex flex-wrap gap-1.5">
+                          {skills.slice(0, 4).map((skill, idx) => (
+                            <span key={idx} className="px-2.5 py-0.5 bg-blue-50 text-blue-600 rounded-full text-xs font-medium">
+                              {skill}
+                            </span>
+                          ))}
+                          {skills.length > 4 && (
+                            <span className="px-2.5 py-0.5 bg-gray-100 text-gray-500 rounded-full text-xs">
+                              +{skills.length - 4} more
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {profile.isApproved && (
+                      <div className="flex items-center text-green-600 gap-1.5">
+                        <Shield className="w-4 h-4" />
+                        <span className="text-sm font-medium">Verified Professional</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="p-6 pt-0 grid grid-cols-2 gap-3">
+                    {profile.telegramUsername ? (
+                      <a
+                        href={`https://t.me/${profile.telegramUsername}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-lg flex items-center justify-center transition-colors text-sm"
+                      >
+                        Contact
+                      </a>
+                    ) : (
+                      <button
+                        disabled
+                        className="bg-gray-100 text-gray-400 font-medium py-3 rounded-lg flex items-center justify-center text-sm cursor-not-allowed"
+                      >
+                        Contact
+                      </button>
+                    )}
+                    <Link
+                      href={`/handyman/${handyman.id}`}
+                      className="bg-gray-50 hover:bg-gray-100 text-gray-900 font-medium py-3 rounded-lg border border-gray-200 flex items-center justify-center transition-colors text-sm text-center"
+                    >
+                      View Profile
+                    </Link>
                   </div>
                 </div>
-
-                {handyman.verified && (
-                  <div className="flex items-center text-green-600 mb-6">
-                    <Shield className="w-4 h-4 mr-2" />
-                    <span className="text-sm font-medium">Verified Professional</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Actions */}
-              <div className="p-6 pt-0">
-                <div className="grid grid-cols-2 gap-3">
-                  <button className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-lg flex items-center justify-center transition-colors">
-                    Contact
-                  </button>
-                  <Link 
-                    href={`/handyman/${handyman.id}`}
-                    className="bg-gray-50 hover:bg-gray-100 text-gray-900 font-medium py-3 rounded-lg border border-gray-200 flex items-center justify-center transition-colors text-center"
-                  >
-                    View Profile
-                  </Link>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Load More */}
-        <div className="text-center mt-12">
-          <button className="px-8 py-3 bg-white text-blue-600 font-medium rounded-lg border border-blue-200 hover:bg-blue-50 transition-colors">
-            Load More Handymen
-          </button>
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <Footer />
