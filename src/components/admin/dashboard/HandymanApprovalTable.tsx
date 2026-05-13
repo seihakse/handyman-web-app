@@ -1,165 +1,256 @@
-// components/dashboard/HandymanApprovalTable.tsx
 'use client';
 
-import { useState } from 'react';
-import { Search, Filter, Calendar } from 'lucide-react';
-import { pendingHandymen } from '@/lib/data';
-import Badge from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
-import Pagination from '@/components/ui/Pagination';
-import { Check, X, Eye } from 'lucide-react';
+// src/components/admin/dashboard/HandymanApprovalTable.tsx
+import { useEffect, useState, useCallback } from 'react';
+import { CheckCircle, XCircle, Clock, Star, MapPin, Wrench, RefreshCw } from 'lucide-react';
 
-const categories = ['All Categories', 'Plumbing', 'Electrical', 'Carpentry', 'Cleaning'];
+interface Handyman {
+  id: string;
+  userId: string;
+  bio: string | null;
+  skills: string | null;
+  rating: number | null;
+  totalReviews: number;
+  isApproved: boolean;
+  yearsOfExperience: number | null;
+  serviceArea: string | null;
+  telegramUsername: string | null;
+  profilePicture: string | null;
+  createdAt: string;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+  };
+}
+
+type FilterType = 'pending' | 'approved' | 'all';
 
 export default function HandymanApprovalTable() {
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5;
+  const [handymen, setHandymen] = useState<Handyman[]>([]);
+  const [filter, setFilter] = useState<FilterType>('pending');
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  const handleApprove = (id: string) => {
-    alert(`Approved handyman ${id}`);
-  };
+  const fetchHandymen = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/admin/handymen?status=${filter}`);
+      const data = await res.json();
+      setHandymen(data.handymen ?? []);
+    } catch (err) {
+      console.error('Failed to fetch handymen', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [filter]);
 
-  const handleReject = (id: string) => {
-    alert(`Rejected handyman ${id}`);
-  };
+  useEffect(() => {
+    fetchHandymen();
+  }, [fetchHandymen]);
 
-  const handleView = (id: string) => {
-    alert(`Viewing handyman ${id}`);
-  };
-
-  const renderStars = (rating: number) => {
-    return (
-      <div className="flex items-center">
-        {[...Array(5)].map((_, i) => (
-          <span
-            key={i}
-            className={`text-lg ${i < Math.floor(rating) ? 'text-yellow-400' : 'text-gray-300'}`}
-          >
-            ★
-          </span>
-        ))}
-        <span className="ml-2 font-medium">{rating}</span>
-      </div>
-    );
+  const handleAction = async (userId: string, action: 'approve' | 'reject') => {
+    setActionLoading(userId + action);
+    try {
+      const res = await fetch(`/api/admin/handymen/${userId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      });
+      if (res.ok) {
+        // Optimistically remove from current filtered list
+        if (filter === 'pending' && action === 'approve') {
+          setHandymen(prev => prev.filter(h => h.userId !== userId));
+        } else if (filter === 'approved' && action === 'reject') {
+          setHandymen(prev => prev.filter(h => h.userId !== userId));
+        } else {
+          await fetchHandymen();
+        }
+      }
+    } catch (err) {
+      console.error('Action failed', err);
+    } finally {
+      setActionLoading(null);
+    }
   };
 
   return (
-    <div className="card mb-8">
-      <div className="flex justify-between items-center mb-6">
+    <div className="bg-white rounded-xl shadow mb-8">
+      {/* Header */}
+      <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h3 className="text-xl font-bold text-gray-800">Pending Handyman Approvals</h3>
-          <p className="text-gray-500">5 handymen awaiting approval</p>
+          <h2 className="text-lg font-semibold text-gray-900">Handyman Approvals</h2>
+          <p className="text-sm text-gray-500">
+            {filter === 'pending'
+              ? 'Waiting for approval — hidden from the public website until approved'
+              : filter === 'approved'
+              ? 'Currently visible on the public website'
+              : `${handymen.length} total handymen`}
+          </p>
         </div>
-        <Button>View All</Button>
-      </div>
-
-      {/* Filters */}
-      <div className="flex flex-wrap gap-4 mb-6">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-          <input
-            type="text"
-            placeholder="Search handymen..."
-            className="input-field pl-10"
-          />
-        </div>
-
-        <div className="relative">
-          <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-          <select className="input-field pl-10">
-            {categories.map((category) => (
-              <option key={category}>{category}</option>
-            ))}
-          </select>
-        </div>
-
-        <div className="relative">
-          <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-          <select className="input-field pl-10">
-            <option>Newest First</option>
-            <option>Oldest First</option>
-          </select>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={fetchHandymen}
+            title="Refresh"
+            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition"
+          >
+            <RefreshCw className="w-4 h-4" />
+          </button>
+          {(['pending', 'approved', 'all'] as FilterType[]).map((f) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`px-4 py-1.5 rounded-lg text-sm font-medium transition capitalize ${
+                filter === f ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              {f === 'pending' ? 'Pending' : f === 'approved' ? 'Approved' : 'All'}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Table */}
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <tr className="text-left text-gray-500 text-sm border-b">
-              <th className="pb-3 font-medium">Name</th>
-              <th className="pb-3 font-medium">Category</th>
-              <th className="pb-3 font-medium">Location</th>
-              <th className="pb-3 font-medium">Experience</th>
-              <th className="pb-3 font-medium">ID Card</th>
-              <th className="pb-3 font-medium">Status</th>
-              <th className="pb-3 font-medium">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {pendingHandymen.map((handyman) => (
-              <tr key={handyman.id} className="border-b border-gray-100 hover:bg-gray-50">
-                <td className="py-4">
-                  <div className="flex items-center">
-                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-700 font-medium mr-3">
-                      {handyman.avatar}
-                    </div>
-                    <div>
-                      <p className="font-medium">{handyman.name}</p>
-                      <p className="text-gray-500 text-xs">
-                        Applied: {handyman.appliedDate}
-                      </p>
-                    </div>
-                  </div>
-                </td>
-                <td className="py-4">
-                  <Badge variant="category">{handyman.category}</Badge>
-                </td>
-                <td className="py-4">{handyman.location}</td>
-                <td className="py-4 font-medium">{handyman.experience} years</td>
-                <td className="py-4">{handyman.idcard}</td>
-                <td className="py-4">
-                  <Badge variant="pending">Pending</Badge>
-                </td>
-                <td className="py-4">
-                  <div className="flex space-x-2">
-                    <button
-                        onClick={() => handleApprove(handyman.id)}
-                        className="w-8 h-8 bg-green-100 text-green-700 rounded-lg flex items-center justify-center hover:bg-green-200 transition-colors"
-                        title="Approve"
-                        >
-                        <Check size={16} />
-                    </button>
-                    <button
-                    onClick={() => handleView(handyman.id)}
-                    className="w-8 h-8 bg-blue-100 text-blue-700 rounded-lg flex items-center justify-center hover:bg-blue-200 transition-colors"
-                    title="View"
-                    >
-                    <Eye size={16} />
-                    </button>
-                    <button
-                    onClick={() => handleReject(handyman.id)}
-                    className="w-8 h-8 bg-red-100 text-red-700 rounded-lg flex items-center justify-center hover:bg-red-200 transition-colors"
-                    title="Reject"
-                    >
-                    <X size={16} />
-                    </button>
-                  </div>
-                </td>
+      {/* Body */}
+      {loading ? (
+        <div className="p-8 space-y-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-16 bg-gray-100 rounded-lg animate-pulse" />
+          ))}
+        </div>
+      ) : handymen.length === 0 ? (
+        <div className="text-center py-16">
+          <Wrench className="w-10 h-10 mx-auto mb-3 text-gray-300" />
+          <p className="font-medium text-gray-500">
+            {filter === 'pending' ? 'No pending applications' : 'No handymen found'}
+          </p>
+          <p className="text-sm text-gray-400 mt-1">
+            {filter === 'pending' ? 'All caught up!' : 'Try a different filter'}
+          </p>
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 text-gray-500 uppercase text-xs tracking-wider">
+              <tr>
+                <th className="px-6 py-3 text-left">Handyman</th>
+                <th className="px-6 py-3 text-left">Skills</th>
+                <th className="px-6 py-3 text-left">Details</th>
+                <th className="px-6 py-3 text-left">Status</th>
+                <th className="px-6 py-3 text-left">Joined</th>
+                <th className="px-6 py-3 text-left">Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {handymen.map((h) => (
+                <tr key={h.id} className="hover:bg-gray-50 transition">
+                  {/* Handyman */}
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      {h.profilePicture ? (
+                        <img src={h.profilePicture} alt={h.user.name} className="w-9 h-9 rounded-full object-cover shrink-0" />
+                      ) : (
+                        <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-sm shrink-0">
+                          {h.user.name?.charAt(0).toUpperCase() ?? '?'}
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <p className="font-medium text-gray-900 truncate">{h.user.name}</p>
+                        <p className="text-xs text-gray-500 truncate">{h.user.email}</p>
+                      </div>
+                    </div>
+                  </td>
 
-      {/* Pagination */}
-      <div className="mt-6">
-        <Pagination
-          currentPage={currentPage}
-          totalPages={10}
-          onPageChange={setCurrentPage}
-        />
-      </div>
+                  {/* Skills */}
+                  <td className="px-6 py-4">
+                    <div className="flex flex-wrap gap-1 max-w-[200px]">
+                      {(h.skills ?? '').split(',').slice(0, 3).map(s => s.trim()).filter(Boolean).map(skill => (
+                        <span key={skill} className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full text-xs">{skill}</span>
+                      ))}
+                      {(h.skills ?? '').split(',').length > 3 && (
+                        <span className="text-xs text-gray-400">+{(h.skills ?? '').split(',').length - 3} more</span>
+                      )}
+                    </div>
+                  </td>
+
+                  {/* Details */}
+                  <td className="px-6 py-4 text-xs text-gray-600 space-y-1">
+                    {h.yearsOfExperience != null && (
+                      <div className="flex items-center gap-1"><Star className="w-3 h-3" />{h.yearsOfExperience} yrs exp</div>
+                    )}
+                    {h.serviceArea && (
+                      <div className="flex items-center gap-1"><MapPin className="w-3 h-3" />{h.serviceArea}</div>
+                    )}
+                    {h.telegramUsername && (
+                      <div className="text-blue-500">@{h.telegramUsername}</div>
+                    )}
+                  </td>
+
+                  {/* Status */}
+                  <td className="px-6 py-4">
+                    {h.isApproved ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                        <CheckCircle className="w-3 h-3" /> Approved
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
+                        <Clock className="w-3 h-3" /> Pending
+                      </span>
+                    )}
+                  </td>
+
+                  {/* Joined */}
+                  <td className="px-6 py-4 text-xs text-gray-500 whitespace-nowrap">
+                    {new Date(h.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  </td>
+
+                  {/* Actions */}
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-2">
+                      {!h.isApproved ? (
+                        <button
+                          onClick={() => handleAction(h.userId, 'approve')}
+                          disabled={!!actionLoading}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded-lg transition disabled:opacity-50"
+                        >
+                          <CheckCircle className="w-3.5 h-3.5" />
+                          {actionLoading === h.userId + 'approve' ? 'Approving...' : 'Approve'}
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleAction(h.userId, 'reject')}
+                          disabled={!!actionLoading}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-xs font-medium rounded-lg transition disabled:opacity-50"
+                        >
+                          <XCircle className="w-3.5 h-3.5" />
+                          {actionLoading === h.userId + 'reject' ? 'Revoking...' : 'Revoke'}
+                        </button>
+                      )}
+                      <a
+                        href={`/handyman/${h.userId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-medium rounded-lg transition"
+                      >
+                        View
+                      </a>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Info banner for pending tab */}
+      {!loading && filter === 'pending' && handymen.length > 0 && (
+        <div className="px-6 py-3 bg-amber-50 border-t border-amber-100 rounded-b-xl">
+          <p className="text-xs text-amber-700 flex items-center gap-2">
+            <Clock className="w-3.5 h-3.5 shrink-0" />
+            Approved handymen appear immediately on the public website. Pending handymen are invisible to visitors.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

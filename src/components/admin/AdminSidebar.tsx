@@ -8,7 +8,8 @@ import {
   LayoutDashboard, 
   Users, 
   Wrench, 
-  Layers, 
+  Layers,
+  Newspaper, 
   LogOut 
 } from 'lucide-react';
 
@@ -17,6 +18,7 @@ const menuItems = [
   { icon: <Users size={20} />, label: 'Users', href: '/admin/user' },
   { icon: <Wrench size={20} />, label: 'Handymen', href: '/admin/handymen' },
   { icon: <Layers size={20} />, label: 'Categories', href: '/admin/categories' },
+  { icon: <Newspaper size={20} />, label: 'Reports', href: '/admin/reports' },
   { icon: <LogOut size={20} />, label: 'Sign Out', href: '/api/auth/logout' },
 ];
 

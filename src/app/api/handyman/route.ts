@@ -1,45 +1,38 @@
-// app/api/handyman/route.ts
+// src/app/api/handyman/route.ts
+// Returns only APPROVED handymen for the public listing and home page
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 
 export async function GET() {
   try {
-    const handymen = await prisma.user.findMany({
-      where: {
-        role: 'handyman',
-        handymanProfile: {
-          isApproved: true,
-        },
-      },
+    const handymen = await prisma.handymanProfile.findMany({
+      where: { isApproved: true },
+      orderBy: { rating: 'desc' },
       select: {
         id: true,
-        name: true,
-        profilePicture: true,
-        address: true,
-        handymanProfile: {
+        userId: true,
+        bio: true,
+        skills: true,
+        rating: true,
+        totalReviews: true,
+        availability: true,
+        isApproved: true,
+        yearsOfExperience: true,
+        serviceArea: true,
+        telegramUsername: true,
+        createdAt: true,
+        user: {
           select: {
-            bio: true,
-            skills: true,
-            availability: true,
-            rating: true,
-            totalReviews: true,
-            isApproved: true,
-            yearsOfExperience: true,
-            serviceArea: true,
-            telegramUsername: true,
+            id: true,
+            name: true,
           },
-        },
-      },
-      orderBy: {
-        handymanProfile: {
-          rating: 'desc',
         },
       },
     });
 
-    return NextResponse.json(handymen);
+    return NextResponse.json({ handymen });
   } catch (error) {
-    console.error('Fetch handymen error:', error);
+    console.error('[GET HANDYMEN]', error);
     return NextResponse.json({ error: 'Failed to fetch handymen' }, { status: 500 });
   }
 }
