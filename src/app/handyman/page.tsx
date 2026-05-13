@@ -2,10 +2,15 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { MapPin, Star, Shield, Wrench, Zap, Hammer, Paintbrush, Loader2 } from 'lucide-react';
+import { MapPin, Star, Shield, Wrench, Zap, Hammer, Paintbrush, Loader2, Layers } from 'lucide-react';
 import Link from 'next/link';
 import Header from '@/components/feature/Header';
 import Footer from '@/components/feature/Footer';
+
+interface Category {
+  id: string;
+  name: string;
+}
 
 interface Handyman {
   id: string;
@@ -31,21 +36,24 @@ const availabilityConfig = {
   UNAVAILABLE: { label: 'Currently Unavailable', classes: 'bg-gray-100 text-gray-700'    },
 };
 
-const categories = ['All Services', 'Electrical', 'Plumbing', 'Carpentry', 'Painting'];
-const icons      = [Hammer, Zap, Wrench, Hammer, Paintbrush];
+const fallbackIcons = [Hammer, Zap, Wrench, Paintbrush, Layers];
 
 export default function HandymanPage() {
-  const [handymen, setHandymen]           = useState<Handyman[]>([]);
-  const [filtered, setFiltered]           = useState<Handyman[]>([]);
-  const [loading, setLoading]             = useState(true);
+  const [handymen, setHandymen]             = useState<Handyman[]>([]);
+  const [filtered, setFiltered]             = useState<Handyman[]>([]);
+  const [dbCategories, setDbCategories]     = useState<Category[]>([]);
+  const [loading, setLoading]               = useState(true);
   const [activeCategory, setActiveCategory] = useState('All Services');
 
   useEffect(() => {
-    fetch('/api/handyman')
-      .then(res => res.json())
-      .then(data => {
-        setHandymen(data);
-        setFiltered(data);
+    Promise.all([
+      fetch('/api/handyman').then(r => r.json()),
+      fetch('/api/categories').then(r => r.json()),
+    ])
+      .then(([handymenData, categoriesData]) => {
+        setHandymen(handymenData);
+        setFiltered(handymenData);
+        setDbCategories(Array.isArray(categoriesData) ? categoriesData.filter((c: Category & { isActive?: boolean }) => c.isActive !== false) : []);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -65,6 +73,8 @@ export default function HandymanPage() {
       );
     }
   };
+
+  const allCategories = ['All Services', ...dbCategories.map(c => c.name)];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -101,8 +111,8 @@ export default function HandymanPage() {
 
         {/* Category filters */}
         <div className="flex flex-wrap gap-3 mt-6 py-6">
-          {categories.map((cat, i) => {
-            const Icon = icons[i];
+          {allCategories.map((cat, i) => {
+            const Icon = fallbackIcons[i % fallbackIcons.length];
             const active = activeCategory === cat;
             return (
               <button
