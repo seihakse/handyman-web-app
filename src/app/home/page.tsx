@@ -12,36 +12,41 @@ import {
 } from 'lucide-react';
 import Footer from '@/components/feature/Footer';
 
+// Matches the shape returned by GET /api/handyman
 interface Handyman {
-  id: string;
+  id: string;         // profile id
   userId: string;
   bio: string | null;
   skills: string | null;
-  rating: number | null;
+  rating: number;
   totalReviews: number;
   availability: 'AVAILABLE' | 'BUSY' | 'UNAVAILABLE';
   isApproved: boolean;
   serviceArea: string | null;
   telegramUsername: string | null;
-  profilePicture: string | null;
-  user: { id: string; name: string };
+  user: {
+    id: string;
+    name: string;
+    profilePicture: string | null;
+    address: string | null;
+  };
 }
 
 const availabilityConfig = {
-  AVAILABLE:   { label: 'Available',     classes: 'bg-green-100 text-green-800'  },
-  BUSY:        { label: 'Busy',          classes: 'bg-orange-100 text-orange-800'},
-  UNAVAILABLE: { label: 'Unavailable',   classes: 'bg-gray-100 text-gray-700'   },
+  AVAILABLE:   { label: 'Available',   classes: 'bg-green-100 text-green-800'   },
+  BUSY:        { label: 'Busy',        classes: 'bg-orange-100 text-orange-800' },
+  UNAVAILABLE: { label: 'Unavailable', classes: 'bg-gray-100 text-gray-700'    },
 };
 
 const services = [
-  { name: 'Plumbing',        icon: <Wrench className="h-6 w-6" />,      color: 'bg-blue-100 text-blue-600'    },
-  { name: 'Electrical',      icon: <Zap className="h-6 w-6" />,         color: 'bg-yellow-100 text-yellow-600'},
-  { name: 'Carpentry',       icon: <Hammer className="h-6 w-6" />,      color: 'bg-amber-100 text-amber-600'  },
-  { name: 'Painting',        icon: <Paintbrush className="h-6 w-6" />,  color: 'bg-purple-100 text-purple-600'},
-  { name: 'HVAC',            icon: <Thermometer className="h-6 w-6" />, color: 'bg-red-100 text-red-600'      },
-  { name: 'Appliance Repair',icon: <Wrench className="h-6 w-6" />,      color: 'bg-green-100 text-green-600'  },
-  { name: 'Landscaping',     icon: <Sprout className="h-6 w-6" />,      color: 'bg-emerald-100 text-emerald-600'},
-  { name: 'General Repairs', icon: <Wrench className="h-6 w-6" />,      color: 'bg-gray-100 text-gray-600'    },
+  { name: 'Plumbing',         icon: <Wrench className="h-6 w-6" />,      color: 'bg-blue-100 text-blue-600'      },
+  { name: 'Electrical',       icon: <Zap className="h-6 w-6" />,         color: 'bg-yellow-100 text-yellow-600'  },
+  { name: 'Carpentry',        icon: <Hammer className="h-6 w-6" />,      color: 'bg-amber-100 text-amber-600'    },
+  { name: 'Painting',         icon: <Paintbrush className="h-6 w-6" />,  color: 'bg-purple-100 text-purple-600'  },
+  { name: 'HVAC',             icon: <Thermometer className="h-6 w-6" />, color: 'bg-red-100 text-red-600'        },
+  { name: 'Appliance Repair', icon: <Wrench className="h-6 w-6" />,      color: 'bg-green-100 text-green-600'    },
+  { name: 'Landscaping',      icon: <Sprout className="h-6 w-6" />,      color: 'bg-emerald-100 text-emerald-600'},
+  { name: 'General Repairs',  icon: <Wrench className="h-6 w-6" />,      color: 'bg-gray-100 text-gray-600'      },
 ];
 
 export default function Home() {
@@ -53,9 +58,8 @@ export default function Home() {
       .then(res => res.json())
       .then(data => {
         // API returns { handymen: [...] }
-        const list = Array.isArray(data) ? data : (data.handymen ?? []);
-        // Show top 6 by rating on homepage
-        setHandymen(list.slice(0, 6));
+        const list: Handyman[] = data.handymen ?? [];
+        setHandymen(list.slice(0, 6)); // top 6 by rating on homepage
       })
       .catch(console.error)
       .finally(() => setLoadingHandymen(false));
@@ -116,9 +120,9 @@ export default function Home() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
-              { icon: <Shield className="h-8 w-8 text-blue-600" />, bg: 'bg-blue-100', title: 'Verified Professionals', desc: 'All handymen are background-checked and verified for your safety.' },
-              { icon: <Clock className="h-8 w-8 text-green-600" />, bg: 'bg-green-100', title: 'Quick Service', desc: 'Get connected with available handymen in your area within minutes.' },
-              { icon: <Star className="h-8 w-8 text-yellow-600" />, bg: 'bg-yellow-100', title: 'Quality Guaranteed', desc: 'Rate and review services to maintain high quality standards.' },
+              { icon: <Shield className="h-8 w-8 text-blue-600" />,  bg: 'bg-blue-100',   title: 'Verified Professionals', desc: 'All handymen are background-checked and verified for your safety.' },
+              { icon: <Clock className="h-8 w-8 text-green-600" />,  bg: 'bg-green-100',  title: 'Quick Service',          desc: 'Get connected with available handymen in your area within minutes.' },
+              { icon: <Star className="h-8 w-8 text-yellow-600" />,  bg: 'bg-yellow-100', title: 'Quality Guaranteed',      desc: 'Rate and review services to maintain high quality standards.' },
             ].map((item, i) => (
               <div key={i} className="text-center p-6">
                 <div className={`${item.bg} w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4`}>
@@ -155,18 +159,17 @@ export default function Home() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {handymen.map((h) => {
-                const profile = h;
-                const rating = profile.rating ?? 0;
-                const skills = (profile.skills ?? '').split(',').map(s => s.trim()).filter(Boolean);
-                const avail = availabilityConfig[profile.availability] ?? availabilityConfig.UNAVAILABLE;
+                const rating = h.rating ?? 0;
+                const skills = (h.skills ?? '').split(',').map(s => s.trim()).filter(Boolean);
+                const avail  = availabilityConfig[h.availability] ?? availabilityConfig.UNAVAILABLE;
 
                 return (
                   <Card key={h.id} className="hover:shadow-xl transition-all duration-300">
                     <CardContent className="p-6">
                       <div className="flex items-start space-x-4 mb-4">
                         <div className="w-16 h-16 rounded-full overflow-hidden bg-blue-100 shrink-0">
-                          {h.profilePicture ? (
-                            <img src={h.profilePicture} alt={h.user.name} className="w-full h-full object-cover" />
+                          {h.user.profilePicture ? (
+                            <img src={h.user.profilePicture} alt={h.user.name} className="w-full h-full object-cover" />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center text-blue-600 text-2xl font-bold">
                               {h.user.name?.charAt(0).toUpperCase()}
@@ -183,19 +186,19 @@ export default function Home() {
                           <div className="flex items-center mt-1">
                             <Star className="h-4 w-4 text-yellow-500 fill-current" />
                             <span className="ml-1 text-sm font-medium">{rating.toFixed(1)}</span>
-                            <span className="ml-1 text-sm text-gray-500">({profile.totalReviews} reviews)</span>
+                            <span className="ml-1 text-sm text-gray-500">({h.totalReviews} reviews)</span>
                           </div>
-                          {profile.serviceArea && (
+                          {h.serviceArea && (
                             <div className="flex items-center mt-1 text-sm text-gray-500">
                               <MapPin className="h-3.5 w-3.5 mr-1 shrink-0" />
-                              <span className="truncate">{profile.serviceArea}</span>
+                              <span className="truncate">{h.serviceArea}</span>
                             </div>
                           )}
                         </div>
                       </div>
 
-                      {profile.bio && (
-                        <p className="text-gray-600 text-sm mb-4 line-clamp-2">{profile.bio}</p>
+                      {h.bio && (
+                        <p className="text-gray-600 text-sm mb-4 line-clamp-2">{h.bio}</p>
                       )}
 
                       <div className="flex flex-wrap gap-1.5 mb-4">
@@ -212,9 +215,9 @@ export default function Home() {
                       </div>
 
                       <div className="flex gap-3">
-                        {profile.telegramUsername ? (
+                        {h.telegramUsername ? (
                           <a
-                            href={`https://t.me/${profile.telegramUsername}`}
+                            href={`https://t.me/${h.telegramUsername}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2.5 rounded-lg text-center transition"

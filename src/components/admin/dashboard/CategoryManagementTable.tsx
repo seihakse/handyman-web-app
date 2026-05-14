@@ -1,16 +1,15 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Plus, Edit2, Trash2, Loader2, X } from 'lucide-react';
-import Badge from '@/components/ui/Badge';
-import Button from '@/components/ui/admin/Button';
+// src/components/admin/dashboard/CategoryManagementTable.tsx
+import { useEffect, useState, useCallback } from 'react';
+import { Plus, Edit2, Trash2, Layers, X, Check, RefreshCw, Wrench } from 'lucide-react';
 
 interface Category {
   id: string;
   name: string;
   description: string | null;
-  isActive: boolean;
-  _count: { handymen: number };
+  handymenCount: number;
+  createdAt: string;
 }
 
 interface FormState {
@@ -19,165 +18,264 @@ interface FormState {
 }
 
 export default function CategoryManagementTable() {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [categories, setCategories]     = useState<Category[]>([]);
+  const [loading, setLoading]           = useState(true);
+  const [error, setError]               = useState<string | null>(null);
 
-  // modal state: null = closed, 'add' = adding, Category = editing
-  const [modal, setModal] = useState<null | 'add' | Category>(null);
-  const [deleteTarget, setDeleteTarget] = useState<Category | null>(null);
-  const [form, setForm] = useState<FormState>({ name: '', description: '' });
-  const [saving, setSaving] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
+  // Add modal
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [addForm, setAddForm]           = useState<FormState>({ name: '', description: '' });
+  const [addLoading, setAddLoading]     = useState(false);
+  const [addError, setAddError]         = useState<string | null>(null);
 
-  const fetchCategories = async () => {
+  // Inline edit
+  const [editingId, setEditingId]       = useState<string | null>(null);
+  const [editForm, setEditForm]         = useState<FormState>({ name: '', description: '' });
+  const [editLoading, setEditLoading]   = useState(false);
+  const [editError, setEditError]       = useState<string | null>(null);
+
+  // Delete
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deleteLoading, setDeleteLoading]     = useState<string | null>(null);
+
+  const fetchCategories = useCallback(async () => {
+    setLoading(true);
+    setError(null);
     try {
-      const res = await fetch('/api/categories');
-      if (!res.ok) throw new Error('Failed to load');
-      setCategories(await res.json());
+      const res = await fetch('/api/admin/categories');
+      const data = await res.json();
+      setCategories(data.categories ?? []);
     } catch {
-      setError('Failed to load categories.');
+      setError('Failed to load categories');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  useEffect(() => { fetchCategories(); }, []);
+  useEffect(() => { fetchCategories(); }, [fetchCategories]);
 
-  const openAdd = () => {
-    setForm({ name: '', description: '' });
-    setFormError(null);
-    setModal('add');
-  };
-
-  const openEdit = (cat: Category) => {
-    setForm({ name: cat.name, description: cat.description ?? '' });
-    setFormError(null);
-    setModal(cat);
-  };
-
-  const closeModal = () => { setModal(null); setFormError(null); };
-
-  const handleSave = async () => {
-    if (!form.name.trim()) { setFormError('Name is required.'); return; }
-    setSaving(true);
-    setFormError(null);
-
-    const isEdit = modal !== 'add' && modal !== null;
-    const url = isEdit ? `/api/categories/${(modal as Category).id}` : '/api/categories';
-    const method = isEdit ? 'PUT' : 'POST';
-
+  // ── ADD ──────────────────────────────────────────
+  const handleAdd = async () => {
+    if (!addForm.name.trim()) { setAddError('Name is required'); return; }
+    setAddLoading(true);
+    setAddError(null);
     try {
-      const res = await fetch(url, {
-        method,
+      const res = await fetch('/api/admin/categories', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify(addForm),
       });
       const data = await res.json();
-      if (!res.ok) { setFormError(data.error ?? 'Something went wrong.'); return; }
-
-      if (isEdit) {
-        setCategories(prev => prev.map(c => c.id === data.id ? data : c));
-      } else {
-        setCategories(prev => [...prev, data]);
-      }
-      closeModal();
+      if (!res.ok) { setAddError(data.error ?? 'Failed to create'); return; }
+      setCategories(prev => [...prev, { ...data.category, handymenCount: 0 }]);
+      setAddForm({ name: '', description: '' });
+      setShowAddModal(false);
     } catch {
-      setFormError('Network error. Please try again.');
+      setAddError('Network error');
     } finally {
-      setSaving(false);
+      setAddLoading(false);
     }
   };
 
-  const handleDelete = async () => {
-    if (!deleteTarget) return;
-    setSaving(true);
+  // ── EDIT ─────────────────────────────────────────
+  const startEdit = (cat: Category) => {
+    setEditingId(cat.id);
+    setEditForm({ name: cat.name, description: cat.description ?? '' });
+    setEditError(null);
+  };
+
+  const cancelEdit = () => { setEditingId(null); setEditError(null); };
+
+  const handleEdit = async (id: string) => {
+    if (!editForm.name.trim()) { setEditError('Name is required'); return; }
+    setEditLoading(true);
+    setEditError(null);
     try {
-      const res = await fetch(`/api/categories/${deleteTarget.id}`, { method: 'DELETE' });
-      if (!res.ok) {
-        const data = await res.json();
-        alert(data.error ?? 'Failed to delete.');
-        return;
-      }
-      setCategories(prev => prev.filter(c => c.id !== deleteTarget.id));
-      setDeleteTarget(null);
+      const res = await fetch(`/api/admin/categories/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editForm),
+      });
+      const data = await res.json();
+      if (!res.ok) { setEditError(data.error ?? 'Failed to update'); return; }
+      setCategories(prev => prev.map(c => c.id === id ? { ...c, ...data.category } : c));
+      setEditingId(null);
     } catch {
-      alert('Network error. Please try again.');
+      setEditError('Network error');
     } finally {
-      setSaving(false);
+      setEditLoading(false);
+    }
+  };
+
+  // ── DELETE ───────────────────────────────────────
+  const handleDelete = async (id: string) => {
+    setDeleteLoading(id);
+    try {
+      const res = await fetch(`/api/admin/categories/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        setCategories(prev => prev.filter(c => c.id !== id));
+        setConfirmDeleteId(null);
+      }
+    } catch {
+      // silent — could add a toast here
+    } finally {
+      setDeleteLoading(null);
     }
   };
 
   return (
     <>
-      <div className="card">
-        <div className="flex justify-between items-center mb-6">
+      <div className="bg-white rounded-xl shadow mb-8">
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between flex-wrap gap-3">
           <div>
-            <h3 className="text-xl font-bold text-gray-800">Service Categories</h3>
-            <p className="text-gray-500">Manage service categories and subcategories</p>
+            <h2 className="text-lg font-semibold text-gray-900">Service Categories</h2>
+            <p className="text-sm text-gray-500">{categories.length} categories · changes reflect immediately on the public site</p>
           </div>
-          <Button className="flex items-center" onClick={openAdd}>
-            <Plus size={20} className="mr-2" />
-            Add New Category
-          </Button>
+          <div className="flex gap-2">
+            <button
+              onClick={fetchCategories}
+              title="Refresh"
+              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition"
+            >
+              <RefreshCw className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => { setShowAddModal(true); setAddError(null); }}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition"
+            >
+              <Plus className="w-4 h-4" /> Add Category
+            </button>
+          </div>
         </div>
 
-        {loading && (
-          <div className="flex justify-center py-12">
-            <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+        {/* Body */}
+        {loading ? (
+          <div className="p-8 space-y-3">
+            {[1, 2, 3].map(i => <div key={i} className="h-14 bg-gray-100 rounded-lg animate-pulse" />)}
           </div>
-        )}
-
-        {error && <p className="text-red-500 text-center py-8">{error}</p>}
-
-        {!loading && !error && (
+        ) : error ? (
+          <div className="text-center py-12 text-red-500">{error}</div>
+        ) : categories.length === 0 ? (
+          <div className="text-center py-16 text-gray-500">
+            <Layers className="w-10 h-10 mx-auto mb-3 text-gray-300" />
+            <p className="font-medium">No categories yet</p>
+            <p className="text-sm text-gray-400 mt-1">Add your first category to get started</p>
+          </div>
+        ) : (
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="text-left text-gray-500 text-sm border-b">
-                  <th className="pb-3 font-medium">Category Name</th>
-                  <th className="pb-3 font-medium">Description</th>
-                  <th className="pb-3 font-medium">Handymen</th>
-                  <th className="pb-3 font-medium">Status</th>
-                  <th className="pb-3 font-medium">Actions</th>
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 text-gray-500 uppercase text-xs tracking-wider">
+                <tr>
+                  <th className="px-6 py-3 text-left">Name</th>
+                  <th className="px-6 py-3 text-left">Description</th>
+                  <th className="px-6 py-3 text-left">Handymen</th>
+                  <th className="px-6 py-3 text-left">Created</th>
+                  <th className="px-6 py-3 text-left">Actions</th>
                 </tr>
               </thead>
-              <tbody>
-                {categories.length === 0 && (
-                  <tr>
-                    <td colSpan={5} className="py-12 text-center text-gray-400">
-                      No categories yet. Add one to get started.
-                    </td>
-                  </tr>
-                )}
+              <tbody className="divide-y divide-gray-100">
                 {categories.map(cat => (
-                  <tr key={cat.id} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="py-4 font-medium">{cat.name}</td>
-                    <td className="py-4 text-gray-600 max-w-xs truncate">{cat.description ?? '—'}</td>
-                    <td className="py-4 font-medium">{cat._count.handymen}</td>
-                    <td className="py-4">
-                      <Badge variant={cat.isActive ? 'active' : 'default'}>
-                        {cat.isActive ? 'Active' : 'Inactive'}
-                      </Badge>
-                    </td>
-                    <td className="py-4">
-                      <div className="flex space-x-2">
-                        <button
-                          onClick={() => openEdit(cat)}
-                          className="w-8 h-8 bg-gray-100 text-gray-700 rounded-lg flex items-center justify-center hover:bg-gray-200 transition-colors"
-                          title="Edit"
-                        >
-                          <Edit2 size={16} />
-                        </button>
-                        <button
-                          onClick={() => setDeleteTarget(cat)}
-                          className="w-8 h-8 bg-red-100 text-red-700 rounded-lg flex items-center justify-center hover:bg-red-200 transition-colors"
-                          title="Delete"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </td>
+                  <tr key={cat.id} className="hover:bg-gray-50 transition">
+                    {editingId === cat.id ? (
+                      /* ── Inline edit row ── */
+                      <>
+                        <td className="px-6 py-3">
+                          <input
+                            autoFocus
+                            value={editForm.name}
+                            onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))}
+                            className="border border-blue-300 rounded-lg px-3 py-1.5 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="Category name"
+                          />
+                          {editError && <p className="text-xs text-red-500 mt-1">{editError}</p>}
+                        </td>
+                        <td className="px-6 py-3">
+                          <input
+                            value={editForm.description}
+                            onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))}
+                            className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="Description (optional)"
+                          />
+                        </td>
+                        <td className="px-6 py-3 text-gray-500">{cat.handymenCount}</td>
+                        <td className="px-6 py-3 text-gray-400 text-xs">
+                          {new Date(cat.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </td>
+                        <td className="px-6 py-3">
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleEdit(cat.id)}
+                              disabled={editLoading}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition disabled:opacity-50"
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                              {editLoading ? 'Saving…' : 'Save'}
+                            </button>
+                            <button
+                              onClick={cancelEdit}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-medium rounded-lg transition"
+                            >
+                              <X className="w-3.5 h-3.5" /> Cancel
+                            </button>
+                          </div>
+                        </td>
+                      </>
+                    ) : (
+                      /* ── Normal row ── */
+                      <>
+                        <td className="px-6 py-4 font-medium text-gray-900">{cat.name}</td>
+                        <td className="px-6 py-4 text-gray-500 max-w-xs truncate">
+                          {cat.description ?? <span className="text-gray-300 italic">No description</span>}
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="inline-flex items-center gap-1 text-gray-700">
+                            <Wrench className="w-3.5 h-3.5 text-gray-400" />
+                            {cat.handymenCount}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-gray-400 text-xs">
+                          {new Date(cat.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </td>
+                        <td className="px-6 py-4">
+                          {confirmDeleteId === cat.id ? (
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-red-600 font-medium">Delete?</span>
+                              <button
+                                onClick={() => handleDelete(cat.id)}
+                                disabled={deleteLoading === cat.id}
+                                className="px-2 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition disabled:opacity-50"
+                              >
+                                {deleteLoading === cat.id ? '…' : 'Yes'}
+                              </button>
+                              <button
+                                onClick={() => setConfirmDeleteId(null)}
+                                className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded hover:bg-gray-200 transition"
+                              >
+                                No
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => startEdit(cat)}
+                                className="w-8 h-8 bg-gray-100 text-gray-700 rounded-lg flex items-center justify-center hover:bg-blue-50 hover:text-blue-600 transition"
+                                title="Edit"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => setConfirmDeleteId(cat.id)}
+                                className="w-8 h-8 bg-red-50 text-red-500 rounded-lg flex items-center justify-center hover:bg-red-100 transition"
+                                title="Delete"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                      </>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -186,89 +284,66 @@ export default function CategoryManagementTable() {
         )}
       </div>
 
-      {/* Add / Edit modal */}
-      {modal !== null && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
-            <div className="flex justify-between items-center px-6 py-4 border-b">
-              <h2 className="text-lg font-bold text-gray-800">
-                {modal === 'add' ? 'Add New Category' : 'Edit Category'}
-              </h2>
-              <button onClick={closeModal} className="text-gray-400 hover:text-gray-600">
-                <X size={20} />
+      {/* ── Add Category Modal ── */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 p-6">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-lg font-semibold text-gray-900">Add New Category</h3>
+              <button
+                onClick={() => { setShowAddModal(false); setAddForm({ name: '', description: '' }); }}
+                className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition"
+              >
+                <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="px-6 py-5 space-y-4">
+
+            <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Name <span className="text-red-500">*</span>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Category Name <span className="text-red-500">*</span>
                 </label>
                 <input
+                  autoFocus
                   type="text"
-                  value={form.name}
-                  onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={addForm.name}
+                  onChange={e => setAddForm(f => ({ ...f, name: e.target.value }))}
+                  onKeyDown={e => e.key === 'Enter' && handleAdd()}
+                  className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="e.g. Plumbing"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Description <span className="text-gray-400 font-normal">(optional)</span>
+                </label>
                 <textarea
-                  value={form.description}
-                  onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+                  value={addForm.description}
+                  onChange={e => setAddForm(f => ({ ...f, description: e.target.value }))}
                   rows={3}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                  placeholder="Short description of this category"
+                  className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  placeholder="Short description of what this category covers…"
                 />
               </div>
-              {formError && <p className="text-sm text-red-500">{formError}</p>}
-            </div>
-            <div className="flex justify-end gap-3 px-6 py-4 border-t">
-              <button
-                onClick={closeModal}
-                className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 font-medium"
-              >
-                Cancel
-              </button>
-              <Button onClick={handleSave} disabled={saving} className="flex items-center gap-2">
-                {saving && <Loader2 size={16} className="animate-spin" />}
-                {modal === 'add' ? 'Create' : 'Save Changes'}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
 
-      {/* Delete confirmation modal */}
-      {deleteTarget && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm">
-            <div className="px-6 py-5">
-              <h2 className="text-lg font-bold text-gray-800 mb-2">Delete Category</h2>
-              <p className="text-gray-600 text-sm">
-                Are you sure you want to delete{' '}
-                <span className="font-semibold">{deleteTarget.name}</span>?{' '}
-                {deleteTarget._count.handymen > 0 && (
-                  <span className="text-red-600">
-                    {deleteTarget._count.handymen} handyman(s) will be unlinked from this category.
-                  </span>
-                )}
-              </p>
+              {addError && (
+                <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{addError}</p>
+              )}
             </div>
-            <div className="flex justify-end gap-3 px-6 py-4 border-t">
+
+            <div className="flex gap-3 mt-6">
               <button
-                onClick={() => setDeleteTarget(null)}
-                className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 font-medium"
+                onClick={handleAdd}
+                disabled={addLoading}
+                className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition disabled:opacity-50"
               >
-                Cancel
+                {addLoading ? 'Creating…' : 'Create Category'}
               </button>
               <button
-                onClick={handleDelete}
-                disabled={saving}
-                className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+                onClick={() => { setShowAddModal(false); setAddForm({ name: '', description: '' }); }}
+                className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-lg transition"
               >
-                {saving && <Loader2 size={16} className="animate-spin" />}
-                Delete
+                Cancel
               </button>
             </div>
           </div>

@@ -3,19 +3,21 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 
 // PATCH /api/admin/categories/[id]
-// Body: { name?: string, description?: string }
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
+    const { id } = await params;
     const { name, description } = await req.json();
 
     if (name !== undefined && (typeof name !== 'string' || name.trim() === '')) {
       return NextResponse.json({ error: 'Category name cannot be empty' }, { status: 400 });
     }
 
-    // Check for name conflict on rename
     if (name) {
       const conflict = await prisma.serviceCategory.findFirst({
-        where: { name: name.trim(), NOT: { id: params.id } },
+        where: { name: name.trim(), NOT: { id } },
       });
       if (conflict) {
         return NextResponse.json({ error: 'A category with this name already exists' }, { status: 409 });
@@ -23,7 +25,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     }
 
     const updated = await prisma.serviceCategory.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         ...(name !== undefined && { name: name.trim() }),
         ...(description !== undefined && { description: description.trim() || null }),
@@ -38,16 +40,19 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 }
 
 // DELETE /api/admin/categories/[id]
-// Sets categoryId = null on all associated handyman_profiles before deleting
-export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    // Unlink handymen first (FK is SetNull but safer to be explicit)
+    const { id } = await params;
+
     await prisma.handymanProfile.updateMany({
-      where: { categoryId: params.id },
+      where: { categoryId: id },
       data: { categoryId: null },
     });
 
-    await prisma.serviceCategory.delete({ where: { id: params.id } });
+    await prisma.serviceCategory.delete({ where: { id } });
 
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -9,8 +9,6 @@ export async function GET() {
       totalHandymen,
       pendingApprovals,
       approvedHandymen,
-      totalReports,
-      pendingReports,
       totalCategories,
       totalReviews,
     ] = await Promise.all([
@@ -18,13 +16,13 @@ export async function GET() {
       prisma.handymanProfile.count(),
       prisma.handymanProfile.count({ where: { isApproved: false } }),
       prisma.handymanProfile.count({ where: { isApproved: true } }),
-      prisma.report.count(),
-      // @ts-ignore — remove after npx prisma generate
-      prisma.report.count({ where: { status: 'PENDING' } }),
       prisma.serviceCategory.count(),
       // @ts-ignore — remove after npx prisma generate
       prisma.review.count(),
     ]);
+
+    const totalReports = 0;
+    const pendingReports = 0;
 
     return NextResponse.json({
       totalUsers,

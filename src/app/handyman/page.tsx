@@ -12,21 +12,24 @@ interface Category {
   name: string;
 }
 
+// Matches the shape returned by GET /api/handyman
 interface Handyman {
-  id: string;
-  name: string;
-  profilePicture: string | null;
-  address: string | null;
-  handymanProfile: {
-    bio: string | null;
-    skills: string | null;
-    availability: 'AVAILABLE' | 'BUSY' | 'UNAVAILABLE';
-    rating: number | null;
-    totalReviews: number;
-    isApproved: boolean;
-    yearsOfExperience: number | null;
-    serviceArea: string | null;
-    telegramUsername: string | null;
+  id: string;         // profile id
+  userId: string;
+  bio: string | null;
+  skills: string | null;
+  availability: 'AVAILABLE' | 'BUSY' | 'UNAVAILABLE';
+  rating: number;
+  totalReviews: number;
+  isApproved: boolean;
+  yearsOfExperience: number | null;
+  serviceArea: string | null;
+  telegramUsername: string | null;
+  user: {
+    id: string;
+    name: string;
+    profilePicture: string | null;
+    address: string | null;
   };
 }
 
@@ -51,9 +54,15 @@ export default function HandymanPage() {
       fetch('/api/categories').then(r => r.json()),
     ])
       .then(([handymenData, categoriesData]) => {
-        setHandymen(handymenData);
-        setFiltered(handymenData);
-        setDbCategories(Array.isArray(categoriesData) ? categoriesData.filter((c: Category & { isActive?: boolean }) => c.isActive !== false) : []);
+        // API returns { handymen: [...] }
+        const list: Handyman[] = handymenData.handymen ?? [];
+        setHandymen(list);
+        setFiltered(list);
+        setDbCategories(
+          Array.isArray(categoriesData)
+            ? categoriesData.filter((c: Category & { isActive?: boolean }) => c.isActive !== false)
+            : []
+        );
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -66,9 +75,7 @@ export default function HandymanPage() {
     } else {
       setFiltered(
         handymen.filter(h =>
-          h.handymanProfile.skills
-            ?.toLowerCase()
-            .includes(cat.toLowerCase())
+          h.skills?.toLowerCase().includes(cat.toLowerCase())
         )
       );
     }
@@ -149,32 +156,31 @@ export default function HandymanPage() {
         {/* Cards */}
         {!loading && filtered.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {filtered.map(handyman => {
-              const profile = handyman.handymanProfile;
-              const skills  = profile.skills?.split(',').map(s => s.trim()).filter(Boolean) ?? [];
-              const rating  = profile.rating ?? 0;
-              const avail   = availabilityConfig[profile.availability] ?? availabilityConfig.UNAVAILABLE;
-              const location = profile.serviceArea || handyman.address || '';
+            {filtered.map(h => {
+              const skills  = h.skills?.split(',').map(s => s.trim()).filter(Boolean) ?? [];
+              const rating  = h.rating ?? 0;
+              const avail   = availabilityConfig[h.availability] ?? availabilityConfig.UNAVAILABLE;
+              const location = h.serviceArea || h.user.address || '';
 
               return (
                 <div
-                  key={handyman.id}
+                  key={h.id}
                   className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow flex flex-col"
                 >
                   {/* Header */}
                   <div className="p-6 border-b border-gray-100">
                     <div className="flex items-start gap-4">
                       <div className="w-16 h-16 rounded-full overflow-hidden bg-blue-600 shrink-0">
-                        {handyman.profilePicture ? (
-                          <img src={handyman.profilePicture} alt={handyman.name} className="w-full h-full object-cover" />
+                        {h.user.profilePicture ? (
+                          <img src={h.user.profilePicture} alt={h.user.name} className="w-full h-full object-cover" />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-white text-2xl font-bold">
-                            {handyman.name.charAt(0).toUpperCase()}
+                            {h.user.name.charAt(0).toUpperCase()}
                           </div>
                         )}
                       </div>
                       <div className="min-w-0">
-                        <h3 className="text-xl font-bold text-gray-900 truncate">{handyman.name}</h3>
+                        <h3 className="text-xl font-bold text-gray-900 truncate">{h.user.name}</h3>
                         {location && (
                           <div className="flex items-center text-gray-600 mt-1">
                             <MapPin className="w-4 h-4 mr-1 shrink-0" />
@@ -197,16 +203,16 @@ export default function HandymanPage() {
                         }`} />
                       ))}
                       <span className="ml-2 font-bold text-gray-900">{rating.toFixed(1)}</span>
-                      <span className="ml-1 text-gray-500 text-sm">({profile.totalReviews})</span>
+                      <span className="ml-1 text-gray-500 text-sm">({h.totalReviews})</span>
                     </div>
                   </div>
 
                   {/* Details */}
                   <div className="p-6 flex-1">
-                    {profile.bio && (
+                    {h.bio && (
                       <div className="mb-5">
                         <h4 className="font-bold text-gray-900 mb-1.5 text-sm">About</h4>
-                        <p className="text-gray-600 text-sm line-clamp-3">{profile.bio}</p>
+                        <p className="text-gray-600 text-sm line-clamp-3">{h.bio}</p>
                       </div>
                     )}
 
@@ -230,7 +236,7 @@ export default function HandymanPage() {
                       </div>
                     )}
 
-                    {profile.isApproved && (
+                    {h.isApproved && (
                       <div className="flex items-center text-green-600 gap-1.5">
                         <Shield className="w-4 h-4" />
                         <span className="text-sm font-medium">Verified Professional</span>
@@ -240,9 +246,9 @@ export default function HandymanPage() {
 
                   {/* Actions */}
                   <div className="p-6 pt-0 grid grid-cols-2 gap-3">
-                    {profile.telegramUsername ? (
+                    {h.telegramUsername ? (
                       <a
-                        href={`https://t.me/${profile.telegramUsername}`}
+                        href={`https://t.me/${h.telegramUsername}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-lg flex items-center justify-center transition-colors text-sm"
@@ -258,7 +264,7 @@ export default function HandymanPage() {
                       </button>
                     )}
                     <Link
-                      href={`/handyman/${handyman.id}`}
+                      href={`/handyman/${h.userId}`}
                       className="bg-gray-50 hover:bg-gray-100 text-gray-900 font-medium py-3 rounded-lg border border-gray-200 flex items-center justify-center transition-colors text-sm text-center"
                     >
                       View Profile

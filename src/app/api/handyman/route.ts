@@ -1,12 +1,16 @@
 // src/app/api/handyman/route.ts
-// Returns only APPROVED handymen for the public listing and home page
+// Returns only APPROVED, active handymen for the public listing and home page
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 
 export async function GET() {
   try {
     const handymen = await prisma.handymanProfile.findMany({
-      where: { isApproved: true },
+      where: {
+        isApproved: true,
+        isPaused: false,   // paused → hidden from public
+        isBanned: false,   // banned → hidden from public
+      },
       orderBy: { rating: 'desc' },
       select: {
         id: true,
@@ -25,6 +29,8 @@ export async function GET() {
           select: {
             id: true,
             name: true,
+            profilePicture: true, // ← lives on User, exposed here for both pages
+            address: true,
           },
         },
       },

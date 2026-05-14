@@ -8,65 +8,168 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ─────────────────────────────────────────────
+// USER
+// ─────────────────────────────────────────────
+
 model User {
-  id              String           @id @default(cuid())
-  name            String
-  email           String           @unique
-  phone           String?
-  password        String
-  address         String?
-  profilePicture  String?
-  role            UserRole
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  id             String   @id @default(cuid())
+  name           String
+  email          String   @unique
+  phone          String?  @unique        // restored @unique from your DBML
+  password       String
+  address        String?
+  profilePicture String?
+  role           UserRole @default(customer)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
   handymanProfile HandymanProfile?
+  reviewsWritten  Review[]         @relation("ReviewerRelation")
+  reviewsReceived Review[]         @relation("RevieweeRelation")
+  reporterReports Report[]         @relation("reporterReports")
+  reportedReports Report[]         @relation("reportedReports")
 
   @@map("users")
 }
 
-model HandymanProfile {
-  id              String   @id @default(cuid())
-  userId          String   @unique
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  bio             String?
-  skills          String?
-  certificate     String?
-  idCardImage     String?
-  portfolioImage  String?
-  availability    AvailabilityStatus @default(AVAILABLE)
-  rating          Float?   @default(0)
-  totalReviews    Int      @default(0)
-  isApproved      Boolean  @default(false)
-  categoryId      String?
-  category        ServiceCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  telegramUsername  String?
-  yearsOfExperience Int?
-  serviceArea       String?
-
-  @@map("handyman_profiles")
-}
+// ─────────────────────────────────────────────
+// SERVICE CATEGORY
+// ─────────────────────────────────────────────
 
 model ServiceCategory {
   id          String            @id @default(cuid())
   name        String            @unique
   description String?
-  isActive    Boolean           @default(true)
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
+
+  // Relations
   handymen    HandymanProfile[]
 
   @@map("service_categories")
 }
 
+// ─────────────────────────────────────────────
+// HANDYMAN PROFILE
+// ─────────────────────────────────────────────
+
+model HandymanProfile {
+  id                String           @id @default(cuid())
+  userId            String           @unique
+  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Category
+  categoryId        String?
+  category          ServiceCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  // Profile fields
+  bio               String?
+  skills            String?
+  certificate       String?
+  idCardImage       String?
+  portfolioImage    String?
+  availability      AvailabilityStatus @default(AVAILABLE)
+  rating            Float            @default(0.0)
+  totalReviews      Int              @default(0)
+  isApproved        Boolean          @default(false)
+  telegramUsername  String?
+  yearsOfExperience Int?
+  serviceArea       String?
+  isPaused  Boolean @default(false)
+  isBanned  Boolean @default(false)
+
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+
+  // Relations
+  reviews           Review[]
+  reports           Report[]
+
+  @@map("handyman_profiles")
+}
+
+// ─────────────────────────────────────────────
+// REVIEW
+// ─────────────────────────────────────────────
+
+model Review {
+  id         String          @id @default(cuid())
+
+  // Who wrote it
+  reviewerId String
+  reviewer   User            @relation("ReviewerRelation", fields: [reviewerId], references: [id], onDelete: Cascade)
+
+  // Which handyman profile is being reviewed
+  handymanId String
+  handyman   HandymanProfile @relation(fields: [handymanId], references: [id], onDelete: Cascade)
+
+  // The handyman's user record (for display — name, photo)
+  revieweeId String
+  reviewee   User            @relation("RevieweeRelation", fields: [revieweeId], references: [id], onDelete: Cascade)
+
+  rating    Int              // 1–5; enforce range in your API layer
+  comment   String?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  // One review per customer per handyman
+  @@unique([reviewerId, handymanId])
+  @@map("reviews")
+}
+
+// ─────────────────────────────────────────────
+// REPORT
+// ─────────────────────────────────────────────
+
+model Report {
+  id          String          @id @default(cuid())
+  handymanId  String
+  handyman    HandymanProfile @relation(fields: [handymanId], references: [id], onDelete: Cascade)
+  reporterId  String?
+  reporter    User?           @relation("reporterReports", fields: [reporterId], references: [id], onDelete: SetNull)
+  reportedId  String?
+  reported    User?           @relation("reportedReports", fields: [reportedId], references: [id], onDelete: SetNull)
+
+  reason      ReportType
+  description String
+  status      ReportStatus    @default(PENDING)
+
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@map("reports")
+}
+
+// ─────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────
+
 enum UserRole {
   customer
   handyman
+  admin
 }
 
 enum AvailabilityStatus {
   AVAILABLE
   BUSY
   UNAVAILABLE
+}
+
+enum ReportType {
+  FRAUD
+  INAPPROPRIATE_BEHAVIOR
+  SPAM
+  FAKE_REVIEW
+  OTHER
+}
+
+enum ReportStatus {
+  PENDING
+  UNDER_REVIEW
+  RESOLVED
+  DISMISSED
 }

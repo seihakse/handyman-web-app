@@ -10,9 +10,16 @@ export async function GET(req: NextRequest) {
         id: true,
         name: true,
         email: true,
+        role: true,       // ← was missing; drives the "Type" column
         createdAt: true,
         handymanProfile: {
-          select: { isApproved: true, rating: true },
+          select: {
+            id: true,
+            isApproved: true,
+            isPaused: true,
+            isBanned: true,
+            rating: true,
+          },
         },
       },
     });
