@@ -2,19 +2,19 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { MapPin, Star, Shield, Wrench, Zap, Hammer, Paintbrush, Loader2, Layers } from 'lucide-react';
+import { MapPin, Star, Shield, Wrench, Loader2, ChevronDown, X } from 'lucide-react';
 import Link from 'next/link';
 import Header from '@/components/feature/Header';
 import Footer from '@/components/feature/Footer';
+import { ALL_LOCATIONS } from '@/lib/locations';
 
 interface Category {
   id: string;
   name: string;
 }
 
-// Matches the shape returned by GET /api/handyman
 interface Handyman {
-  id: string;         // profile id
+  id: string;
   userId: string;
   bio: string | null;
   skills: string | null;
@@ -25,6 +25,7 @@ interface Handyman {
   yearsOfExperience: number | null;
   serviceArea: string | null;
   telegramUsername: string | null;
+  category: { id: string; name: string } | null;
   user: {
     id: string;
     name: string;
@@ -39,49 +40,56 @@ const availabilityConfig = {
   UNAVAILABLE: { label: 'Currently Unavailable', classes: 'bg-gray-100 text-gray-700'    },
 };
 
-const fallbackIcons = [Hammer, Zap, Wrench, Paintbrush, Layers];
-
 export default function HandymanPage() {
-  const [handymen, setHandymen]             = useState<Handyman[]>([]);
-  const [filtered, setFiltered]             = useState<Handyman[]>([]);
-  const [dbCategories, setDbCategories]     = useState<Category[]>([]);
-  const [loading, setLoading]               = useState(true);
-  const [activeCategory, setActiveCategory] = useState('All Services');
+  const [handymen, setHandymen]         = useState<Handyman[]>([]);
+  const [loading, setLoading]           = useState(true);
+  const [categories, setCategories]     = useState<Category[]>([]);
 
-  useEffect(() => {
-    Promise.all([
-      fetch('/api/handyman').then(r => r.json()),
-      fetch('/api/categories').then(r => r.json()),
-    ])
-      .then(([handymenData, categoriesData]) => {
-        // API returns { handymen: [...] }
-        const list: Handyman[] = handymenData.handymen ?? [];
-        setHandymen(list);
-        setFiltered(list);
-        setDbCategories(
-          Array.isArray(categoriesData)
-            ? categoriesData.filter((c: Category & { isActive?: boolean }) => c.isActive !== false)
-            : []
-        );
-      })
+  // Filters
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedArea, setSelectedArea]         = useState('');
+
+  // Fetch with server-side filters
+  const fetchHandymen = (categoryId = '', area = '') => {
+    setLoading(true);
+    const params = new URLSearchParams();
+    if (categoryId) params.set('categoryId', categoryId);
+    if (area)       params.set('area', area);
+
+    fetch(`/api/handyman${params.toString() ? '?' + params.toString() : ''}`)
+      .then(r => r.json())
+      .then(data => setHandymen(data.handymen ?? []))
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, []);
-
-  const handleCategory = (cat: string) => {
-    setActiveCategory(cat);
-    if (cat === 'All Services') {
-      setFiltered(handymen);
-    } else {
-      setFiltered(
-        handymen.filter(h =>
-          h.skills?.toLowerCase().includes(cat.toLowerCase())
-        )
-      );
-    }
   };
 
-  const allCategories = ['All Services', ...dbCategories.map(c => c.name)];
+  useEffect(() => {
+    // Load categories for filter dropdown
+    fetch('/api/admin/categories')
+      .then(r => r.json())
+      .then(data => setCategories(Array.isArray(data) ? data : (data.categories ?? [])))
+      .catch(console.error);
+
+    fetchHandymen();
+  }, []);
+
+  const handleCategoryChange = (categoryId: string) => {
+    setSelectedCategory(categoryId);
+    fetchHandymen(categoryId, selectedArea);
+  };
+
+  const handleAreaChange = (area: string) => {
+    setSelectedArea(area);
+    fetchHandymen(selectedCategory, area);
+  };
+
+  const clearFilters = () => {
+    setSelectedCategory('');
+    setSelectedArea('');
+    fetchHandymen('', '');
+  };
+
+  const hasFilters = selectedCategory || selectedArea;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -99,43 +107,94 @@ export default function HandymanPage() {
         <div className="relative container mx-auto px-4 text-center">
           <h1 className="text-5xl font-bold text-white mb-4">Our Handymen</h1>
           <p className="text-xl text-gray-200 max-w-3xl mx-auto">
-            Getting professional home services has never been easier. Find and connect with trusted handymen in your area.
+            Find and connect with trusted handymen across Phnom Penh and Kandal Province.
           </p>
         </div>
       </section>
 
-      {/* Grid */}
       <div className="container mx-auto px-4 py-8">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          <div>
-            <h2 className="text-3xl lg:text-4xl font-bold text-blue-600 mb-2">Browse by Category</h2>
-            <p className="text-gray-600">Find handymen specializing in your specific needs</p>
-          </div>
-          <p className="text-lg font-medium text-gray-900">
-            {filtered.length} Handyman{filtered.length !== 1 ? 's' : ''} Available
-          </p>
-        </div>
 
-        {/* Category filters */}
-        <div className="flex flex-wrap gap-3 mt-6 py-6">
-          {allCategories.map((cat, i) => {
-            const Icon = fallbackIcons[i % fallbackIcons.length];
-            const active = activeCategory === cat;
-            return (
-              <button
-                key={cat}
-                onClick={() => handleCategory(cat)}
-                className={`px-6 py-3 rounded-lg text-sm font-medium flex items-center transition-colors ${
-                  active
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
-                }`}
-              >
-                <Icon className="w-4 h-4 mr-2" />
-                {cat}
-              </button>
-            );
-          })}
+        {/* ── Filter bar ── */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-8">
+          <div className="flex flex-col md:flex-row gap-4 items-start md:items-end">
+
+            {/* Category filter */}
+            <div className="flex-1 min-w-0">
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                Service Category
+              </label>
+              <div className="relative">
+                <select
+                  value={selectedCategory}
+                  onChange={e => handleCategoryChange(e.target.value)}
+                  className="w-full appearance-none rounded-lg border border-gray-300 bg-white px-4 py-2.5 pr-10 text-sm text-gray-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">All Categories</option>
+                  {categories.map(cat => (
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              </div>
+            </div>
+
+            {/* Location filter */}
+            <div className="flex-1 min-w-0">
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                Service Area
+              </label>
+              <div className="relative">
+                <select
+                  value={selectedArea}
+                  onChange={e => handleAreaChange(e.target.value)}
+                  className="w-full appearance-none rounded-lg border border-gray-300 bg-white px-4 py-2.5 pr-10 text-sm text-gray-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">All Areas</option>
+                  {ALL_LOCATIONS.map(group => (
+                    <optgroup key={group.group} label={group.group}>
+                      {group.areas.map(area => (
+                        <option key={area} value={area}>{area}</option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              </div>
+            </div>
+
+            {/* Result count + clear */}
+            <div className="flex items-end gap-3 shrink-0">
+              {hasFilters && (
+                <button
+                  onClick={clearFilters}
+                  className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+                >
+                  <X className="w-3.5 h-3.5" /> Clear
+                </button>
+              )}
+              <div className="px-4 py-2.5 bg-blue-50 rounded-lg text-sm font-semibold text-blue-700">
+                {loading ? '…' : handymen.length} Handyman{handymen.length !== 1 ? 's' : ''}
+              </div>
+            </div>
+          </div>
+
+          {/* Active filter pills */}
+          {hasFilters && (
+            <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-gray-100">
+              {selectedCategory && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                  {categories.find(c => c.id === selectedCategory)?.name}
+                  <button onClick={() => handleCategoryChange('')}><X className="w-3 h-3" /></button>
+                </span>
+              )}
+              {selectedArea && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                  <MapPin className="w-3 h-3" />{selectedArea}
+                  <button onClick={() => handleAreaChange('')}><X className="w-3 h-3" /></button>
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Loading */}
@@ -146,28 +205,32 @@ export default function HandymanPage() {
         )}
 
         {/* Empty */}
-        {!loading && filtered.length === 0 && (
+        {!loading && handymen.length === 0 && (
           <div className="text-center py-20 text-gray-400">
             <Wrench className="w-12 h-12 mx-auto mb-3 opacity-40" />
-            <p className="text-lg">No handymen found for this category.</p>
+            <p className="text-lg font-medium text-gray-500">No handymen found</p>
+            <p className="text-sm mt-1">Try adjusting your filters</p>
+            {hasFilters && (
+              <button onClick={clearFilters} className="mt-4 px-5 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
+                Clear filters
+              </button>
+            )}
           </div>
         )}
 
         {/* Cards */}
-        {!loading && filtered.length > 0 && (
+        {!loading && handymen.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {filtered.map(h => {
-              const skills  = h.skills?.split(',').map(s => s.trim()).filter(Boolean) ?? [];
-              const rating  = h.rating ?? 0;
-              const avail   = availabilityConfig[h.availability] ?? availabilityConfig.UNAVAILABLE;
+            {handymen.map(h => {
+              const skills   = h.skills?.split(',').map(s => s.trim()).filter(Boolean) ?? [];
+              const rating   = h.rating ?? 0;
+              const avail    = availabilityConfig[h.availability] ?? availabilityConfig.UNAVAILABLE;
               const location = h.serviceArea || h.user.address || '';
 
               return (
-                <div
-                  key={h.id}
-                  className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow flex flex-col"
-                >
-                  {/* Header */}
+                <div key={h.id} className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow flex flex-col">
+
+                  {/* Card header */}
                   <div className="p-6 border-b border-gray-100">
                     <div className="flex items-start gap-4">
                       <div className="w-16 h-16 rounded-full overflow-hidden bg-blue-600 shrink-0">
@@ -187,6 +250,11 @@ export default function HandymanPage() {
                             <span className="text-sm truncate">{location}</span>
                           </div>
                         )}
+                        {h.category && (
+                          <span className="inline-block mt-1.5 px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-xs font-medium">
+                            {h.category.name}
+                          </span>
+                        )}
                       </div>
                     </div>
 
@@ -198,16 +266,14 @@ export default function HandymanPage() {
 
                     <div className="flex items-center mt-4 gap-1">
                       {[...Array(5)].map((_, i) => (
-                        <Star key={i} className={`w-5 h-5 ${
-                          i < Math.floor(rating) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'
-                        }`} />
+                        <Star key={i} className={`w-5 h-5 ${i < Math.floor(rating) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`} />
                       ))}
                       <span className="ml-2 font-bold text-gray-900">{rating.toFixed(1)}</span>
                       <span className="ml-1 text-gray-500 text-sm">({h.totalReviews})</span>
                     </div>
                   </div>
 
-                  {/* Details */}
+                  {/* Card body */}
                   <div className="p-6 flex-1">
                     {h.bio && (
                       <div className="mb-5">
@@ -215,7 +281,6 @@ export default function HandymanPage() {
                         <p className="text-gray-600 text-sm line-clamp-3">{h.bio}</p>
                       </div>
                     )}
-
                     {skills.length > 0 && (
                       <div className="mb-5">
                         <h4 className="font-bold text-gray-900 mb-2 flex items-center gap-1.5 text-sm">
@@ -223,19 +288,14 @@ export default function HandymanPage() {
                         </h4>
                         <div className="flex flex-wrap gap-1.5">
                           {skills.slice(0, 4).map((skill, idx) => (
-                            <span key={idx} className="px-2.5 py-0.5 bg-blue-50 text-blue-600 rounded-full text-xs font-medium">
-                              {skill}
-                            </span>
+                            <span key={idx} className="px-2.5 py-0.5 bg-blue-50 text-blue-600 rounded-full text-xs font-medium">{skill}</span>
                           ))}
                           {skills.length > 4 && (
-                            <span className="px-2.5 py-0.5 bg-gray-100 text-gray-500 rounded-full text-xs">
-                              +{skills.length - 4} more
-                            </span>
+                            <span className="px-2.5 py-0.5 bg-gray-100 text-gray-500 rounded-full text-xs">+{skills.length - 4} more</span>
                           )}
                         </div>
                       </div>
                     )}
-
                     {h.isApproved && (
                       <div className="flex items-center text-green-600 gap-1.5">
                         <Shield className="w-4 h-4" />
@@ -244,7 +304,7 @@ export default function HandymanPage() {
                     )}
                   </div>
 
-                  {/* Actions */}
+                  {/* Card actions — fixed h.id */}
                   <div className="p-6 pt-0 grid grid-cols-2 gap-3">
                     {h.telegramUsername ? (
                       <a
@@ -256,15 +316,12 @@ export default function HandymanPage() {
                         Contact
                       </a>
                     ) : (
-                      <button
-                        disabled
-                        className="bg-gray-100 text-gray-400 font-medium py-3 rounded-lg flex items-center justify-center text-sm cursor-not-allowed"
-                      >
+                      <button disabled className="bg-gray-100 text-gray-400 font-medium py-3 rounded-lg flex items-center justify-center text-sm cursor-not-allowed">
                         Contact
                       </button>
                     )}
                     <Link
-                      href={`/handyman/${h.userId}`}
+                      href={`/handyman/${h.id}`}
                       className="bg-gray-50 hover:bg-gray-100 text-gray-900 font-medium py-3 rounded-lg border border-gray-200 flex items-center justify-center transition-colors text-sm text-center"
                     >
                       View Profile

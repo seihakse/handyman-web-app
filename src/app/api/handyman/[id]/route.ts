@@ -1,64 +1,86 @@
-// src/app/api/admin/handymen/[id]/route.ts
+// src/app/api/handyman/[id]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 
-// PATCH /api/admin/handymen/[id] — approve or reject
-export async function PATCH(
+export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { action } = await req.json(); // action: 'approve' | 'reject'
+    const { id } = await params;
 
-    if (!['approve', 'reject'].includes(action)) {
-      return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
-    }
-
-    const profile = await prisma.handymanProfile.findFirst({
-      where: { userId: params.id },
-    });
-
-    if (!profile) {
-      return NextResponse.json({ error: 'Handyman profile not found' }, { status: 404 });
-    }
-
-    const updated = await prisma.handymanProfile.update({
-      where: { id: profile.id },
-      data: { isApproved: action === 'approve' },
-      select: {
-        id: true,
-        userId: true,
+    const profile = await prisma.handymanProfile.findUnique({
+      where: {
+        id,
         isApproved: true,
-        user: { select: { name: true, email: true } },
+        isPaused:   false,
+        isBanned:   false,
+      },
+      select: {
+        id:                true,
+        bio:               true,
+        skills:            true,
+        certificate:       true,
+        idCardImage:       true,
+        portfolioImage:    true,
+        availability:      true,
+        rating:            true,
+        totalReviews:      true,
+        isApproved:        true,
+        telegramUsername:  true,
+        yearsOfExperience: true,
+        serviceArea:       true,
+        category: {
+          select: { id: true, name: true },
+        },
+        reviews: {
+          orderBy: { createdAt: 'desc' },
+          take: 20,
+          select: {
+            id:        true,
+            rating:    true,
+            comment:   true,
+            createdAt: true,
+            reviewer: {
+              select: {
+                name:           true,
+                profilePicture: true,
+              },
+            },
+          },
+        },
+        user: {
+          select: {
+            id:             true,
+            name:           true,
+            email:          true,
+            phone:          true,
+            profilePicture: true,
+            address:        true,
+            createdAt:      true,
+          },
+        },
       },
     });
 
-    return NextResponse.json({ handyman: updated });
-  } catch (error) {
-    console.error('[ADMIN PATCH HANDYMAN]', error);
-    return NextResponse.json({ error: 'Failed to update handyman' }, { status: 500 });
-  }
-}
-
-// DELETE /api/admin/handymen/[id] — remove handyman profile
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  try {
-    const profile = await prisma.handymanProfile.findFirst({
-      where: { userId: params.id },
-    });
-
     if (!profile) {
-      return NextResponse.json({ error: 'Handyman profile not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }
 
-    await prisma.handymanProfile.delete({ where: { id: profile.id } });
+    const { user, ...rest } = profile;
+    return NextResponse.json({
+      id:              user.id,
+      name:            user.name,
+      email:           user.email,
+      phone:           user.phone,
+      profilePicture:  user.profilePicture,
+      address:         user.address,
+      createdAt:       user.createdAt,
+      handymanProfile: rest,
+    });
 
-    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('[ADMIN DELETE HANDYMAN]', error);
-    return NextResponse.json({ error: 'Failed to delete handyman' }, { status: 500 });
+    console.error('[GET /api/handyman/[id]]', error);
+    return NextResponse.json({ error: 'Server error' }, { status: 500 });
   }
 }
