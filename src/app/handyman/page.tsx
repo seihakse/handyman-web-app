@@ -1,8 +1,8 @@
 // app/handyman/page.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
-import { MapPin, Star, Shield, Wrench, Loader2, ChevronDown, X } from 'lucide-react';
+import { useEffect, useState, useRef } from 'react';
+import { MapPin, Star, Shield, Wrench, Loader2, ChevronDown, X, SlidersHorizontal, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
 import Header from '@/components/feature/Header';
 import Footer from '@/components/feature/Footer';
@@ -40,22 +40,94 @@ const availabilityConfig = {
   UNAVAILABLE: { label: 'Currently Unavailable', classes: 'bg-gray-100 text-gray-700'    },
 };
 
-export default function HandymanPage() {
-  const [handymen, setHandymen]         = useState<Handyman[]>([]);
-  const [loading, setLoading]           = useState(true);
-  const [categories, setCategories]     = useState<Category[]>([]);
+// ── Custom Dropdown ────────────────────────────────────────────────────────────
 
-  // Filters
+function FilterDropdown({
+  label,
+  icon,
+  value,
+  placeholder,
+  isActive,
+  children,
+}: {
+  label: string;
+  icon: React.ReactNode;
+  value: string;
+  placeholder: string;
+  isActive: boolean;
+  children: (close: () => void) => React.ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  // Close on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative">
+      {/* Trigger button */}
+      <button
+        type="button"
+        onClick={() => setOpen(v => !v)}
+        className={`inline-flex items-center gap-2.5 px-4 py-2.5 rounded-xl border text-sm font-medium transition-all duration-150 min-w-[180px] ${
+          isActive
+            ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-100'
+            : open
+            ? 'bg-white border-blue-400 text-gray-800 shadow-sm ring-2 ring-blue-100'
+            : 'bg-white border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-600 shadow-sm'
+        }`}
+      >
+        <span className={isActive ? 'text-white' : 'text-blue-500'}>{icon}</span>
+        <span className="flex-1 text-left truncate max-w-[120px]">
+          {value || placeholder}
+        </span>
+        {isActive ? (
+          <CheckCircle className="w-4 h-4 text-white/80 shrink-0" />
+        ) : (
+          <ChevronDown className={`w-4 h-4 shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+        )}
+      </button>
+
+      {/* Floating panel */}
+      {open && (
+        <div className="absolute top-full left-0 mt-2 z-50 bg-white rounded-2xl shadow-xl border border-gray-100 w-64 overflow-hidden">
+          {/* Panel label */}
+          <div className="px-4 pt-3 pb-2 border-b border-gray-50">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">{label}</p>
+          </div>
+          {/* Scrollable list */}
+          <div className="px-3 py-2 max-h-72 overflow-y-auto">
+            {children(() => setOpen(false))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
+
+export default function HandymanPage() {
+  const [handymen, setHandymen]     = useState<Handyman[]>([]);
+  const [loading, setLoading]       = useState(true);
+  const [categories, setCategories] = useState<Category[]>([]);
+
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedArea, setSelectedArea]         = useState('');
 
-  // Fetch with server-side filters
   const fetchHandymen = (categoryId = '', area = '') => {
     setLoading(true);
     const params = new URLSearchParams();
     if (categoryId) params.set('categoryId', categoryId);
     if (area)       params.set('area', area);
-
     fetch(`/api/handyman${params.toString() ? '?' + params.toString() : ''}`)
       .then(r => r.json())
       .then(data => setHandymen(data.handymen ?? []))
@@ -64,12 +136,10 @@ export default function HandymanPage() {
   };
 
   useEffect(() => {
-    // Load categories for filter dropdown
     fetch('/api/admin/categories')
       .then(r => r.json())
       .then(data => setCategories(Array.isArray(data) ? data : (data.categories ?? [])))
       .catch(console.error);
-
     fetchHandymen();
   }, []);
 
@@ -90,6 +160,7 @@ export default function HandymanPage() {
   };
 
   const hasFilters = selectedCategory || selectedArea;
+  const selectedCategoryName = categories.find(c => c.id === selectedCategory)?.name ?? '';
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -115,96 +186,151 @@ export default function HandymanPage() {
       <div className="container mx-auto px-4 py-8">
 
         {/* ── Filter bar ── */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-8">
-          <div className="flex flex-col md:flex-row gap-4 items-start md:items-end">
+        <div className="mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 flex-wrap">
 
-            {/* Category filter */}
-            <div className="flex-1 min-w-0">
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                Service Category
-              </label>
-              <div className="relative">
-                <select
-                  value={selectedCategory}
-                  onChange={e => handleCategoryChange(e.target.value)}
-                  className="w-full appearance-none rounded-lg border border-gray-300 bg-white px-4 py-2.5 pr-10 text-sm text-gray-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="">All Categories</option>
-                  {categories.map(cat => (
-                    <option key={cat.id} value={cat.id}>{cat.name}</option>
-                  ))}
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              </div>
+            {/* Label */}
+            <div className="flex items-center gap-2 shrink-0">
+              <SlidersHorizontal className="w-4 h-4 text-blue-500" />
+              <span className="text-xs font-bold uppercase tracking-widest text-gray-400">Filters</span>
             </div>
 
-            {/* Location filter */}
-            <div className="flex-1 min-w-0">
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                Service Area
-              </label>
-              <div className="relative">
-                <select
-                  value={selectedArea}
-                  onChange={e => handleAreaChange(e.target.value)}
-                  className="w-full appearance-none rounded-lg border border-gray-300 bg-white px-4 py-2.5 pr-10 text-sm text-gray-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="">All Areas</option>
-                  {ALL_LOCATIONS.map(group => (
-                    <optgroup key={group.group} label={group.group}>
-                      {group.areas.map(area => (
-                        <option key={area} value={area}>{area}</option>
-                      ))}
-                    </optgroup>
-                  ))}
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              </div>
-            </div>
+            {/* Divider */}
+            <div className="hidden sm:block w-px h-6 bg-gray-200 shrink-0" />
 
-            {/* Result count + clear */}
-            <div className="flex items-end gap-3 shrink-0">
+            {/* Dropdowns */}
+            <div className="flex flex-wrap gap-2 flex-1">
+
+              {/* Category */}
+              <FilterDropdown
+                label="Service Category"
+                icon={<Wrench className="w-4 h-4" />}
+                value={selectedCategoryName}
+                placeholder="All Categories"
+                isActive={!!selectedCategory}
+              >
+                {(close) => (
+                  <div className="flex flex-col gap-0.5">
+                    <button
+                      onClick={() => { handleCategoryChange(''); close(); }}
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        selectedCategory === '' ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50'
+                      }`}
+                    >
+                      All Categories
+                      {selectedCategory === '' && <CheckCircle className="w-4 h-4 text-blue-500 shrink-0" />}
+                    </button>
+                    {categories.map(cat => (
+                      <button
+                        key={cat.id}
+                        onClick={() => { handleCategoryChange(cat.id); close(); }}
+                        className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          selectedCategory === cat.id ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50'
+                        }`}
+                      >
+                        {cat.name}
+                        {selectedCategory === cat.id && <CheckCircle className="w-4 h-4 text-blue-500 shrink-0" />}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </FilterDropdown>
+
+              {/* Area */}
+              <FilterDropdown
+                label="Service Area"
+                icon={<MapPin className="w-4 h-4" />}
+                value={selectedArea}
+                placeholder="All Areas"
+                isActive={!!selectedArea}
+              >
+                {(close) => (
+                  <div className="flex flex-col gap-0.5">
+                    <button
+                      onClick={() => { handleAreaChange(''); close(); }}
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        selectedArea === '' ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50'
+                      }`}
+                    >
+                      All Areas
+                      {selectedArea === '' && <CheckCircle className="w-4 h-4 text-blue-500 shrink-0" />}
+                    </button>
+
+                    {ALL_LOCATIONS.map(group => (
+                      <div key={group.group}>
+                        <p className="px-3 pt-3 pb-1 text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                          {group.group}
+                        </p>
+                        {group.areas.map(area => (
+                          <button
+                            key={area}
+                            onClick={() => { handleAreaChange(area); close(); }}
+                            className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                              selectedArea === area ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50'
+                            }`}
+                          >
+                            {area}
+                            {selectedArea === area && <CheckCircle className="w-4 h-4 text-blue-500 shrink-0" />}
+                          </button>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </FilterDropdown>
+
+              {/* Clear */}
               {hasFilters && (
                 <button
                   onClick={clearFilters}
-                  className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+                  className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-red-200 text-sm font-medium text-red-500 hover:bg-red-50 transition-colors"
                 >
                   <X className="w-3.5 h-3.5" /> Clear
                 </button>
               )}
-              <div className="px-4 py-2.5 bg-blue-50 rounded-lg text-sm font-semibold text-blue-700">
-                {loading ? '…' : handymen.length} Handyman{handymen.length !== 1 ? 's' : ''}
-              </div>
             </div>
+
+            {/* Result count */}
+            <span className="shrink-0 self-center inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-full text-xs font-bold tracking-wide">
+              {loading && <Loader2 className="w-3 h-3 animate-spin opacity-80" />}
+              {handymen.length} {handymen.length === 1 ? 'result' : 'results'}
+            </span>
           </div>
 
           {/* Active filter pills */}
           {hasFilters && (
-            <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-gray-100">
+            <div className="flex flex-wrap items-center gap-2 mt-3 pl-1">
+              <span className="text-xs text-gray-400 font-medium">Active:</span>
               {selectedCategory && (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
-                  {categories.find(c => c.id === selectedCategory)?.name}
-                  <button onClick={() => handleCategoryChange('')}><X className="w-3 h-3" /></button>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded-full text-xs font-semibold">
+                  <Wrench className="w-3 h-3" />
+                  {selectedCategoryName}
+                  <button onClick={() => handleCategoryChange('')} className="ml-0.5 hover:text-blue-900 transition-colors">
+                    <X className="w-3 h-3" />
+                  </button>
                 </span>
               )}
               {selectedArea && (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
-                  <MapPin className="w-3 h-3" />{selectedArea}
-                  <button onClick={() => handleAreaChange('')}><X className="w-3 h-3" /></button>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded-full text-xs font-semibold">
+                  <MapPin className="w-3 h-3" />
+                  {selectedArea}
+                  <button onClick={() => handleAreaChange('')} className="ml-0.5 hover:text-blue-900 transition-colors">
+                    <X className="w-3 h-3" />
+                  </button>
                 </span>
               )}
             </div>
           )}
         </div>
 
-        {/* Loading */}
-        {loading && (
+        {/* Loading indicator — small spinner over the result count, not full page */}
+        {loading && handymen.length === 0 && (
           <div className="flex justify-center py-20">
             <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
           </div>
         )}
 
-        {/* Empty */}
+        {/* Empty state */}
         {!loading && handymen.length === 0 && (
           <div className="text-center py-20 text-gray-400">
             <Wrench className="w-12 h-12 mx-auto mb-3 opacity-40" />
@@ -218,9 +344,16 @@ export default function HandymanPage() {
           </div>
         )}
 
-        {/* Cards */}
-        {!loading && handymen.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Cards — stay mounted during filter changes, fade instead of unmounting */}
+        {handymen.length > 0 && (
+          <div
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+            style={{
+              opacity: loading ? 0.45 : 1,
+              pointerEvents: loading ? 'none' : 'auto',
+              transition: 'opacity 0.25s ease',
+            }}
+          >
             {handymen.map(h => {
               const skills   = h.skills?.split(',').map(s => s.trim()).filter(Boolean) ?? [];
               const rating   = h.rating ?? 0;
@@ -304,7 +437,7 @@ export default function HandymanPage() {
                     )}
                   </div>
 
-                  {/* Card actions — fixed h.id */}
+                  {/* Card actions */}
                   <div className="p-6 pt-0 grid grid-cols-2 gap-3">
                     {h.telegramUsername ? (
                       <a

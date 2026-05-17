@@ -230,7 +230,7 @@ export default function Home() {
                           </button>
                         )}
                         <Link
-                          href={`/handyman/${h.userId}`}
+                          href={`/handyman/${h.id}`}
                           className="flex-1 border border-blue-200 text-blue-600 hover:bg-blue-50 text-sm font-medium py-2.5 rounded-lg text-center transition"
                         >
                           View Profile

@@ -1,10 +1,53 @@
-// app/settings/change-password/page.tsx
+// src/app/settings/change-password/page.tsx
 'use client';
 
 import { useState } from 'react';
 import { Eye, EyeOff, Lock, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 
 type Status = 'idle' | 'loading' | 'success' | 'error';
+
+// ── Moved OUTSIDE the page component so React never remounts it on re-render ──
+function PasswordField({
+  label,
+  name,
+  value,
+  placeholder,
+  show,
+  onToggleShow,
+  onChange,
+}: {
+  label: string;
+  name: string;
+  value: string;
+  placeholder: string;
+  show: boolean;
+  onToggleShow: () => void;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+}) {
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1.5">{label}</label>
+      <div className="relative">
+        <input
+          type={show ? 'text' : 'password'}
+          name={name}
+          value={value}
+          onChange={onChange}
+          placeholder={placeholder}
+          required
+          className="w-full px-3 py-2.5 pr-10 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+        />
+        <button
+          type="button"
+          onClick={onToggleShow}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+        >
+          {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export default function ChangePasswordPage() {
   const [form, setForm] = useState({
@@ -17,16 +60,14 @@ export default function ChangePasswordPage() {
     newPassword: false,
     confirmPassword: false,
   });
-  const [status, setStatus] = useState<Status>('idle');
+  const [status, setStatus]   = useState<Status>('idle');
   const [errorMsg, setErrorMsg] = useState('');
 
-  const toggleShow = (field: keyof typeof show) => {
+  const toggleShow = (field: keyof typeof show) =>
     setShow(prev => ({ ...prev, [field]: !prev[field] }));
-  };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,37 +114,15 @@ export default function ChangePasswordPage() {
     }
   };
 
-  const PasswordField = ({
-    label,
-    name,
-    placeholder,
-  }: {
-    label: string;
-    name: keyof typeof form;
-    placeholder: string;
-  }) => (
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1.5">{label}</label>
-      <div className="relative">
-        <input
-          type={show[name] ? 'text' : 'password'}
-          name={name}
-          value={form[name]}
-          onChange={handleChange}
-          placeholder={placeholder}
-          required
-          className="w-full px-3 py-2.5 pr-10 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-        />
-        <button
-          type="button"
-          onClick={() => toggleShow(name)}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-        >
-          {show[name] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-        </button>
-      </div>
-    </div>
-  );
+  const strength =
+    form.newPassword.length >= 12 ? 4
+    : form.newPassword.length >= 10 ? 3
+    : form.newPassword.length >= 6  ? 2
+    : form.newPassword.length > 0   ? 1
+    : 0;
+
+  const strengthLabel = ['', 'Too short', 'Fair', 'Good', 'Strong'][strength];
+  const strengthColor = ['', 'bg-red-400', 'bg-yellow-400', 'bg-blue-400', 'bg-green-500'][strength];
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
@@ -127,17 +146,29 @@ export default function ChangePasswordPage() {
         <PasswordField
           label="Current Password"
           name="currentPassword"
+          value={form.currentPassword}
           placeholder="Enter your current password"
+          show={show.currentPassword}
+          onToggleShow={() => toggleShow('currentPassword')}
+          onChange={handleChange}
         />
         <PasswordField
           label="New Password"
           name="newPassword"
+          value={form.newPassword}
           placeholder="Enter your new password"
+          show={show.newPassword}
+          onToggleShow={() => toggleShow('newPassword')}
+          onChange={handleChange}
         />
         <PasswordField
           label="Confirm New Password"
           name="confirmPassword"
+          value={form.confirmPassword}
           placeholder="Confirm your new password"
+          show={show.confirmPassword}
+          onToggleShow={() => toggleShow('confirmPassword')}
+          onChange={handleChange}
         />
 
         {/* Password strength indicator */}
@@ -145,42 +176,16 @@ export default function ChangePasswordPage() {
           <div>
             <p className="text-xs text-gray-500 mb-1">Password strength</p>
             <div className="flex gap-1">
-              {[1, 2, 3, 4].map((level) => {
-                const strength =
-                  form.newPassword.length >= 12
-                    ? 4
-                    : form.newPassword.length >= 10
-                    ? 3
-                    : form.newPassword.length >= 6
-                    ? 2
-                    : 1;
-                return (
-                  <div
-                    key={level}
-                    className={`h-1.5 flex-1 rounded-full transition-colors ${
-                      level <= strength
-                        ? strength === 1
-                          ? 'bg-red-400'
-                          : strength === 2
-                          ? 'bg-yellow-400'
-                          : strength === 3
-                          ? 'bg-blue-400'
-                          : 'bg-green-500'
-                        : 'bg-gray-200'
-                    }`}
-                  />
-                );
-              })}
+              {[1, 2, 3, 4].map((level) => (
+                <div
+                  key={level}
+                  className={`h-1.5 flex-1 rounded-full transition-colors ${
+                    level <= strength ? strengthColor : 'bg-gray-200'
+                  }`}
+                />
+              ))}
             </div>
-            <p className="text-xs text-gray-400 mt-1">
-              {form.newPassword.length < 6
-                ? 'Too short'
-                : form.newPassword.length < 10
-                ? 'Fair'
-                : form.newPassword.length < 12
-                ? 'Good'
-                : 'Strong'}
-            </p>
+            <p className="text-xs text-gray-400 mt-1">{strengthLabel}</p>
           </div>
         )}
 

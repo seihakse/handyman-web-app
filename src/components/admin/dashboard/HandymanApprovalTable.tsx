@@ -2,7 +2,7 @@
 
 // src/components/admin/dashboard/HandymanApprovalTable.tsx
 import { useEffect, useState, useCallback } from 'react';
-import { CheckCircle, XCircle, Clock, Star, MapPin, Wrench, RefreshCw, PauseCircle, PlayCircle, Ban } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Star, MapPin, Wrench, RefreshCw, PauseCircle, PlayCircle, Ban, Eye } from 'lucide-react';
 
 interface Handyman {
   id: string;           // profile id
@@ -308,14 +308,13 @@ export default function HandymanApprovalTable() {
                       )}
 
                       {/* View profile link */}
-                      <a
-                        href={`/handyman/${h.userId}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-medium rounded-lg transition"
+                      <button
+                        onClick={() => window.open(`/handyman/${h.id}`, '_blank')}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-medium rounded-lg transition"
                       >
+                        <Eye className="w-3.5 h-3.5" />
                         View
-                      </a>
+                      </button>
                     </div>
                   </td>
                 </tr>

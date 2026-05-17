@@ -1,4 +1,4 @@
-// app/handyman/[id]/page.tsx
+// src/app/handyman/[id]/page.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -6,6 +6,8 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import Header from '@/components/feature/Header';
 import Footer from '@/components/feature/Footer';
+import ReviewModal from '@/components/feature/ReviewModal';
+import ReportModal from '@/components/feature/ReportModal';
 import {
   MapPin, Star, Shield, Wrench, Clock, ChevronLeft,
   Send, Award, Calendar, AlertCircle, CheckCircle,
@@ -74,9 +76,19 @@ function StarRow({ rating, size = 'md' }: { rating: number; size?: 'sm' | 'md' |
 
 export default function HandymanProfilePage() {
   const { id } = useParams<{ id: string }>();
-  const [data, setData]       = useState<HandymanData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError]     = useState<string | null>(null);
+
+  const [data, setData]                 = useState<HandymanData | null>(null);
+  const [loading, setLoading]           = useState(true);
+  const [error, setError]               = useState<string | null>(null);
+
+  // Modal visibility
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+
+  // Post-submit feedback
+  const [alreadyReviewed, setAlreadyReviewed] = useState(false);
+  const [reviewSuccess, setReviewSuccess]     = useState(false);
+  const [reportSuccess, setReportSuccess]     = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -89,6 +101,90 @@ export default function HandymanProfilePage() {
       .catch(err => setError(err.message))
       .finally(() => setLoading(false));
   }, [id]);
+
+  // ── Handlers ────────────────────────────────────────────────────────────────
+
+  async function handleReviewSubmit(rating: number, reviewText: string, _images?: File[]) {
+    if (!data) return;
+    // Note: image upload not yet wired to storage — images are ignored until
+    // you add a storage bucket (e.g. Supabase Storage / S3).
+    const res = await fetch('/api/reviews', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        handymanId: data.handymanProfile.id,
+        rating,
+        comment: reviewText,
+      }),
+    });
+
+    const json = await res.json();
+
+    if (!res.ok) {
+      // Throw so ReviewModal catches it and shows the inline error banner
+      throw new Error(json.error ?? 'Failed to submit review');
+    }
+
+    // Optimistically update the displayed rating + prepend new review
+    setData(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        handymanProfile: {
+          ...prev.handymanProfile,
+          rating:       json.updatedRating,
+          totalReviews: json.updatedTotalReviews,
+          reviews: [
+            {
+              id:        json.review.id,
+              rating,
+              comment:   reviewText,
+              createdAt: new Date().toISOString(),
+              reviewer: {
+                name:           json.review.reviewer.name,
+                profilePicture: json.review.reviewer.profilePicture,
+              },
+            },
+            ...prev.handymanProfile.reviews,
+          ],
+        },
+      };
+    });
+
+    setAlreadyReviewed(true);
+    setReviewSuccess(true);
+    setTimeout(() => setReviewSuccess(false), 4000);
+  }
+
+  async function handleReportSubmit(reason: string, description: string, images?: File[]) {
+    if (!data) return;
+
+    // Use FormData so images can be sent alongside text fields
+    const formData = new FormData();
+    formData.append('handymanId', data.handymanProfile.id);
+    formData.append('reason', reason);
+    formData.append('description', description);
+    if (images && images.length > 0) {
+      images.forEach(img => formData.append('images', img));
+    }
+
+    const res = await fetch('/api/reports', {
+      method: 'POST',
+      // No Content-Type header — browser sets it automatically with boundary for FormData
+      body: formData,
+    });
+
+    const json = await res.json();
+
+    if (!res.ok) {
+      throw new Error(json.error ?? 'Failed to submit report');
+    }
+
+    setReportSuccess(true);
+    setTimeout(() => setReportSuccess(false), 4000);
+  }
+
+  // ── Loading / error states ───────────────────────────────────────────────────
 
   if (loading) {
     return (
@@ -234,7 +330,7 @@ export default function HandymanProfilePage() {
               {profile.telegramUsername && (
                 <div className="pt-1">
                   <a
-                    href={`https://t.me/${profile.telegramUsername}`}
+                    href={`https://t.me/${profile.telegramUsername}?text=${encodeURIComponent(`Hi ${data.name.split(' ')[0]}, I found your profile on HandyPro and I'd like to hire you. Are you available?`)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-[12.8px] rounded-lg transition-colors"
@@ -393,10 +489,37 @@ export default function HandymanProfilePage() {
                 <p className="text-[15.1px] text-slate-500 leading-[26px]">
                   Have you worked with {data.name.split(' ')[0]}? Share your experience to help others.
                 </p>
-                <button className="w-full inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-[12.9px] rounded-lg transition-colors">
-                  <MessageSquare className="w-[15px] h-[14px]" /> Write a Review
+
+                {/* Success banners */}
+                {reviewSuccess && (
+                  <div className="flex items-center gap-2 px-4 py-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm font-medium">
+                    <CheckCircle className="w-4 h-4 shrink-0" />
+                    Your review has been posted successfully!
+                  </div>
+                )}
+                {reportSuccess && (
+                  <div className="flex items-center gap-2 px-4 py-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm font-medium">
+                    <CheckCircle className="w-4 h-4 shrink-0" />
+                    Report submitted. Our team will review it shortly.
+                  </div>
+                )}
+
+                <button
+                  onClick={() => setShowReviewModal(true)}
+                  className={`w-full inline-flex items-center justify-center gap-2 px-6 py-2.5 font-bold text-[12.9px] rounded-lg transition-colors ${
+                    alreadyReviewed
+                      ? 'bg-green-100 text-green-700 cursor-default'
+                      : 'bg-blue-600 hover:bg-blue-700 text-white'
+                  }`}
+                >
+                  <MessageSquare className="w-[15px] h-[14px]" />
+                  {alreadyReviewed ? 'You Reviewed This Handyman' : 'Write a Review'}
                 </button>
-                <button className="w-full inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-red-500 hover:bg-red-600 text-white font-bold text-[12.9px] rounded-lg transition-colors">
+
+                <button
+                  onClick={() => setShowReportModal(true)}
+                  className="w-full inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-red-500 hover:bg-red-600 text-white font-bold text-[12.9px] rounded-lg transition-colors"
+                >
                   <Flag className="w-[14px] h-[14px]" /> Report this handyman
                 </button>
               </div>
@@ -456,7 +579,7 @@ export default function HandymanProfilePage() {
               <p className="text-blue-100 text-sm mb-4">Reach out directly via Telegram for a quick response.</p>
               {profile.telegramUsername ? (
                 <a
-                  href={`https://t.me/${profile.telegramUsername}`}
+                  href={`https://t.me/${profile.telegramUsername}?text=${encodeURIComponent(`Hi ${data.name.split(' ')[0]}, I found your profile on HandyPro and I'd like to hire you. Are you available?`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 bg-white text-blue-600 font-semibold rounded-lg hover:bg-blue-50 transition-colors"
@@ -482,6 +605,24 @@ export default function HandymanProfilePage() {
       </main>
 
       <Footer />
+
+      {/* ── Modals ── */}
+      <ReviewModal
+        isOpen={showReviewModal}
+        onClose={() => setShowReviewModal(false)}
+        handymanName={data.name}
+        handymanId={profile.id}
+        alreadyReviewed={alreadyReviewed}
+        onSubmit={handleReviewSubmit}
+      />
+
+      <ReportModal
+        isOpen={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        handymanName={data.name}
+        handymanId={profile.id}
+        onSubmit={handleReportSubmit}
+      />
     </div>
   );
 }
